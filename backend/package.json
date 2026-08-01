@@ -1,0 +1,25 @@
+{
+  "name": "clearcall-backend",
+  "version": "1.0.0",
+  "description": "ClearCall backend - verified employer calling platform",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "clearcall": "file:..",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "resend": "^4.0.0",
+    "twilio": "^5.3.0",
+    "uuid": "^9.0.1",
+    "xml2js": "^0.6.2"
+  }
+}
