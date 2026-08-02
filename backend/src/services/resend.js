@@ -37,12 +37,22 @@ async function sendOtpEmail(toEmail, code) {
     console.log(`[DEV MODE - no RESEND_API_KEY set] OTP for ${toEmail}: ${code}`);
     return { devMode: true, code };
   }
-  return client.emails.send({
-    from: 'ClearCall <noreply@clearcall.com.au>',
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'ClearCall <onboarding@resend.dev>';
+  const result = await client.emails.send({
+    from: fromAddress,
     to: toEmail,
     subject: 'Your ClearCall verification code',
     html: otpEmailHtml(code),
   });
+
+  // The Resend SDK often reports failures (e.g. "recipient not allowed in
+  // sandbox mode") inside result.error instead of throwing an exception.
+  // Turn that into a real thrown error so callers' catch blocks fire.
+  if (result && result.error) {
+    throw new Error(result.error.message || 'Resend rejected this email');
+  }
+
+  return result;
 }
 
 module.exports = { sendOtpEmail };

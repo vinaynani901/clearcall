@@ -17,8 +17,12 @@ router.post('/verify', authMiddleware, async (req, res) => {
   }
 
   if (companyId) {
+    // The officially registered name from the Australian Business Register
+    // always overwrites whatever the employer typed at sign-up — this is
+    // the whole point of ABN verification: job seekers must see the real,
+    // government-confirmed company name, never a self-entered one.
     db.prepare(`
-      UPDATE companies SET abn_verified = 1, abn_registration_date = ?, abn_status = ?, name = COALESCE(name, ?)
+      UPDATE companies SET abn_verified = 1, abn_registration_date = ?, abn_status = ?, name = ?
       WHERE id = ? AND owner_user_id = ?
     `).run(result.abnRegistrationDate, result.abnStatus, result.companyName, companyId, req.user.id);
   }

@@ -1,6 +1,6 @@
 const xml2js = require('xml2js');
 
-const ABR_ENDPOINT = 'https://abr.business.gov.au/abrxmlsearchproxy/abrxmlsearch.asmx/SearchByABNv202001';
+const ABR_ENDPOINT = 'https://abr.business.gov.au/abrxmlsearch/abrxmlsearch.asmx/SearchByABNv202001';
 
 /**
  * Calls the Australian Business Register SearchByABNv202001 endpoint,

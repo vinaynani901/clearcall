@@ -205,7 +205,10 @@ router.post('/send-otp', otpSendLimiter, async (req, res) => {
     await sendOtpEmail(email, code);
   } catch (err) {
     console.error('Failed to send OTP email:', err.message);
-    // Do not leak internal error details; still respond so dev/testing can proceed via server logs
+    // Common cause during local testing: Resend's sandbox sender can only
+    // deliver to the account owner's own email until a domain is verified.
+    // Print the code here too so testing can still proceed.
+    console.log(`[EMAIL SEND FAILED - fallback] OTP for ${email}: ${code}`);
   }
 
   res.json({ message: `Verification code sent to ${email}`, expiresInMinutes: 10 });
