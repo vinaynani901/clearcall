@@ -394,4 +394,17 @@ input, select, textarea { font-family: inherit; }
   z-index: 100;
 }
 
+.call-control-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.call-control-btn:disabled { opacity: 0.5; cursor: default; }
+
 a { color: inherit; }

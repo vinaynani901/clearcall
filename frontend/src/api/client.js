@@ -66,6 +66,7 @@ export const api = {
   initiateCall: (payload) => request('/calls/initiate', { method: 'POST', body: payload }),
   updateCallStatus: (id, payload) => request(`/calls/${id}/status`, { method: 'PUT', body: payload }),
   callHistory: (filter) => request(`/calls/history${filter && filter !== 'all' ? `?filter=${filter}` : ''}`),
+  getVoiceToken: () => request('/calls/voice-token'),
 
   // reports
   submitReport: (payload) => request('/reports', { method: 'POST', body: payload }),

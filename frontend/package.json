@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@twilio/voice-sdk": "^2.18.3",
     "clearcall": "file:..",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

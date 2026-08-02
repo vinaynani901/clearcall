@@ -2,7 +2,7 @@ const express = require('express');
 const db = require('../db');
 const authMiddleware = require('../middleware/auth');
 const { newId } = require('../utils/ids');
-const { initiateVerifiedCall, buildCallMetadataPush } = require('../services/twilio');
+const { generateVoiceAccessToken, buildDialTwiml, buildCallMetadataPush } = require('../services/twilio');
 
 const router = express.Router();
 
@@ -15,7 +15,27 @@ function getUserCompany(userId) {
   `).get(userId);
 }
 
+function publicBaseUrl() {
+  return process.env.PUBLIC_BASE_URL || 'https://example.com';
+}
+
+// GET /api/calls/voice-token
+// Issues a short-lived Twilio Access Token so the employer's browser can
+// register as a Voice client and place a real outbound call over WebRTC —
+// no phone number or SIM needed on the employer's own device.
+router.get('/voice-token', authMiddleware, (req, res) => {
+  const token = generateVoiceAccessToken(req.user.id);
+  if (!token) {
+    return res.status(503).json({ error: 'Calling is not configured yet. Add your Twilio API Key, API Secret, and TwiML App SID to enable real calls.' });
+  }
+  res.json({ token, identity: req.user.id });
+});
+
 // POST /api/calls/initiate
+// Creates the call record and (for ClearCall Verified Calls) the metadata
+// that will be shown on the receiver's Incoming Verified Call screen. The
+// actual audio connection is placed afterwards by the employer's browser
+// using the Twilio Voice SDK and the returned call.id.
 router.post('/initiate', authMiddleware, async (req, res) => {
   const { receiverPhone, receiverName, jobRole, callType, note } = req.body;
   if (!receiverPhone || !callType) {
@@ -51,7 +71,6 @@ router.post('/initiate', authMiddleware, async (req, res) => {
     settings.hide_number, settings.show_name, settings.show_designation, settings.show_photo
   );
 
-  let twilioResult = { simulated: true };
   let metadataPush = null;
 
   if (callType === 'clearcall') {
@@ -64,20 +83,65 @@ router.post('/initiate', authMiddleware, async (req, res) => {
       hideNumber: !!settings.hide_number,
       recruiterPhone: req.user.phone,
     });
-
-    twilioResult = await initiateVerifiedCall({
-      toPhone: receiverPhone,
-      twimlUrl: `${process.env.PUBLIC_BASE_URL || 'https://example.com'}/api/calls/twiml/${id}`,
-      statusCallbackUrl: `${process.env.PUBLIC_BASE_URL || 'https://example.com'}/api/calls/status/${id}`,
-    });
-
-    if (twilioResult.sid) {
-      db.prepare('UPDATE calls SET twilio_call_sid = ? WHERE id = ?').run(twilioResult.sid, id);
-    }
   }
 
   const call = db.prepare('SELECT * FROM calls WHERE id = ?').get(id);
-  res.status(201).json({ call, metadataPush, twilio: twilioResult });
+  res.status(201).json({ call, metadataPush });
+});
+
+// POST /api/calls/voice-twiml
+// Public Twilio webhook — hit automatically when the employer's browser
+// calls device.connect(). Twilio POSTs the custom params we passed from
+// the browser (PhoneNumber, CallId) alongside its own CallSid. We record
+// the Twilio CallSid against our internal call row so voice-status
+// callbacks below can later be matched back to it, then return TwiML that
+// dials the receiver's real phone with the masked ClearCall number as
+// caller ID.
+router.post('/voice-twiml', express.urlencoded({ extended: false }), (req, res) => {
+  const { PhoneNumber, CallId, CallSid } = req.body;
+
+  if (CallId && CallSid) {
+    db.prepare('UPDATE calls SET twilio_call_sid = ? WHERE id = ?').run(CallSid, CallId);
+  }
+
+  if (!PhoneNumber) {
+    res.type('text/xml');
+    return res.send('<Response><Say>Sorry, this call could not be connected. Goodbye.</Say></Response>');
+  }
+
+  const twiml = buildDialTwiml({
+    toPhone: PhoneNumber,
+    statusCallbackUrl: `${publicBaseUrl()}/api/calls/voice-status`,
+  });
+
+  res.type('text/xml');
+  res.send(twiml);
+});
+
+// POST /api/calls/voice-status
+// Public Twilio webhook — status callback for the <Dial><Number> leg.
+// Updates our call record's status/duration as the receiver's phone rings,
+// answers, and the call ends.
+router.post('/voice-status', express.urlencoded({ extended: false }), (req, res) => {
+  const { CallSid, CallStatus, CallDuration } = req.body;
+  if (!CallSid) return res.sendStatus(200);
+
+  const call = db.prepare('SELECT * FROM calls WHERE twilio_call_sid = ?').get(CallSid);
+  if (!call) return res.sendStatus(200);
+
+  let status = null;
+  if (CallStatus === 'in-progress') status = 'answered';
+  else if (CallStatus === 'completed') status = Number(CallDuration) > 0 ? 'answered' : 'missed';
+  else if (CallStatus === 'no-answer') status = 'missed';
+  else if (CallStatus === 'busy') status = 'declined';
+  else if (CallStatus === 'failed' || CallStatus === 'canceled') status = 'missed';
+
+  if (status) {
+    db.prepare('UPDATE calls SET call_status = ?, duration_seconds = ? WHERE id = ?')
+      .run(status, Number(CallDuration) || call.duration_seconds || 0, call.id);
+  }
+
+  res.sendStatus(200);
 });
 
 // PUT /api/calls/:id/status  (update status + duration, e.g. answered/declined/missed)

@@ -1,45 +1,87 @@
-let twilioClient = null;
+const twilio = require('twilio');
 
-function getClient() {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || sid === 'your-twilio-sid-here' || !token || token === 'your-twilio-token-here') {
-    return null;
-  }
-  if (!twilioClient) {
-    const twilio = require('twilio');
-    twilioClient = twilio(sid, token);
-  }
-  return twilioClient;
+function credentialsConfigured() {
+  const { TWILIO_ACCOUNT_SID, TWILIO_API_KEY, TWILIO_API_SECRET, TWILIO_TWIML_APP_SID, TWILIO_PHONE_NUMBER } = process.env;
+  return !!(
+    TWILIO_ACCOUNT_SID && TWILIO_ACCOUNT_SID !== 'your-twilio-sid-here' &&
+    TWILIO_API_KEY && TWILIO_API_KEY !== 'your-twilio-api-key-here' &&
+    TWILIO_API_SECRET && TWILIO_API_SECRET !== 'your-twilio-api-secret-here' &&
+    TWILIO_TWIML_APP_SID && TWILIO_TWIML_APP_SID !== 'your-twiml-app-sid-here' &&
+    TWILIO_PHONE_NUMBER
+  );
 }
 
 /**
- * Initiates a ClearCall Verified Call via Twilio Programmable Voice.
- * The recruiter's real number is never passed to the receiver — Twilio's
- * masked ClearCall number (TWILIO_PHONE_NUMBER) is used as caller ID for
- * every ClearCall Verified Call, regardless of the recruiter's hide-number
- * setting. The hide-number setting only controls what is DISPLAYED on the
- * receiver's ClearCall app screen (see call metadata push below) — the
- * network-level caller ID is always masked for verified calls.
+ * Generates a short-lived Twilio Access Token that lets the employer's own
+ * browser register as a Twilio Voice client and place outbound calls
+ * directly via WebRTC — no phone, SIM, or dialler app needed on their end.
+ *
+ * The token only grants OUTGOING call permission (incomingAllow: false)
+ * because ClearCall employers only ever place calls from the browser; they
+ * never receive calls on this client identity.
  */
-async function initiateVerifiedCall({ toPhone, twimlUrl, statusCallbackUrl }) {
-  const client = getClient();
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+function generateVoiceAccessToken(identity) {
+  if (!credentialsConfigured()) return null;
 
-  if (!client) {
-    console.log(`[DEV MODE - no Twilio credentials set] Would call ${toPhone} from masked ClearCall number ${fromNumber}`);
-    return { devMode: true, sid: `dev_sim_${Date.now()}` };
-  }
+  const AccessToken = twilio.jwt.AccessToken;
+  const VoiceGrant = AccessToken.VoiceGrant;
 
-  const call = await client.calls.create({
-    to: toPhone,
-    from: fromNumber,
-    url: twimlUrl,
-    statusCallback: statusCallbackUrl,
-    statusCallbackEvent: ['initiated', 'answered', 'completed'],
+  const voiceGrant = new VoiceGrant({
+    outgoingApplicationSid: process.env.TWILIO_TWIML_APP_SID,
+    incomingAllow: false,
   });
 
-  return { sid: call.sid };
+  const token = new AccessToken(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_API_KEY,
+    process.env.TWILIO_API_SECRET,
+    { identity: String(identity), ttl: 3600 }
+  );
+  token.addGrant(voiceGrant);
+
+  return token.toJwt();
+}
+
+/**
+ * Twilio requires phone numbers in E.164 format (e.g. +61414705803).
+ * Employers naturally type Australian numbers in local format
+ * (0414 705 803, 04 1470 5803, etc.), so we normalise here rather than
+ * force a strict format on the form. This converts:
+ *  - "0414 705 803"   -> "+61414705803"
+ *  - "61414705803"    -> "+61414705803"
+ *  - "+61414705803"   -> unchanged
+ */
+function normalizeAuPhone(raw) {
+  if (!raw) return raw;
+  let digits = String(raw).trim().replace(/[\s\-()]/g, '');
+  if (digits.startsWith('+')) return digits;
+  if (digits.startsWith('0')) return `+61${digits.slice(1)}`;
+  if (digits.startsWith('61')) return `+${digits}`;
+  return `+61${digits}`;
+}
+
+/**
+ * Builds the TwiML returned to Twilio when the browser places a ClearCall
+ * Verified Call. Twilio dials the receiver's real phone number, and the
+ * masked ClearCall number (TWILIO_PHONE_NUMBER) is always used as the
+ * caller ID — the employer's own number is never sent to the network,
+ * regardless of their hide-number display setting (that setting only
+ * controls what is shown on the ClearCall app screen, not the real
+ * telephone network caller ID).
+ */
+function buildDialTwiml({ toPhone, statusCallbackUrl }) {
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const response = new VoiceResponse();
+  const dial = response.dial({
+    callerId: process.env.TWILIO_PHONE_NUMBER,
+    answerOnBridge: true,
+  });
+  dial.number({
+    statusCallback: statusCallbackUrl,
+    statusCallbackMethod: 'POST',
+    statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+  }, normalizeAuPhone(toPhone));
+  return response.toString();
 }
 
 /**
@@ -65,4 +107,4 @@ function buildCallMetadataPush({ company, callerName, designation, jobRole, hide
   return payload;
 }
 
-module.exports = { initiateVerifiedCall, buildCallMetadataPush };
+module.exports = { generateVoiceAccessToken, buildDialTwiml, buildCallMetadataPush, credentialsConfigured, normalizeAuPhone };

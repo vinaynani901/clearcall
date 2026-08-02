@@ -88,6 +88,27 @@ export function CandidatesIcon({ active }) {
   );
 }
 
+export function MicIcon({ size = 24, color = '#1e293b', muted = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="9" y="2" width="6" height="12" rx="3" fill={color} />
+      <path d="M5 11a7 7 0 0014 0M12 18v3" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" />
+      {muted && <path d="M3 3L21 21" stroke="#ef4444" strokeWidth="2.4" strokeLinecap="round" />}
+    </svg>
+  );
+}
+
+export function HangUpIcon({ size = 28, color = '#ffffff' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M2.5 12.3c4.6-4 14.4-4 19 0 .5.4.5 1.1.1 1.6l-2.3 2.7c-.4.5-1.1.5-1.6.2l-2.6-1.7a1.1 1.1 0 00-1.2 0c-.9.6-2.2.6-3.8 0a1.1 1.1 0 00-1.2 0l-2.6 1.7c-.5.3-1.2.3-1.6-.2l-2.3-2.7a1.2 1.2 0 01.1-1.6Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
 export function CheckCircle({ size = 96, animate = true }) {
   return (
     <svg width={size} height={size} viewBox="0 0 96 96" fill="none" className={animate ? 'check-pop' : ''}>
