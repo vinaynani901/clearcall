@@ -11,9 +11,13 @@ function authMiddleware(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = db.prepare('SELECT id, full_name, email, phone, role, email_verified, created_at FROM users WHERE id = ?').get(payload.userId);
+    const fullUser = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.userId);
+    const user = fullUser ? (({ password_hash, ...rest }) => rest)(fullUser) : null;
     if (!user) {
       return res.status(401).json({ error: 'User no longer exists' });
+    }
+    if (user.suspended) {
+      return res.status(403).json({ error: 'This account has been deactivated' });
     }
     req.user = user;
     next();

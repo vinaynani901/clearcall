@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { StatusBar } from './Shared';
+import AuthShell from './AuthShell';
 
 export default function OnboardingLayout({ step, illustration, headline, description, ctaLabel, ctaTo, skipTo }) {
   const navigate = useNavigate();
   return (
-    <>
+    <AuthShell>
       <StatusBar />
       <div className="screen" style={{ justifyContent: 'space-between' }}>
         <div className="row-between">
@@ -13,9 +14,9 @@ export default function OnboardingLayout({ step, illustration, headline, descrip
         </div>
 
         <div className="screen-centered" style={{ flex: 1 }}>
-          {illustration}
-          <h1 style={{ fontSize: 26, fontWeight: 800, marginTop: 28, marginBottom: 12, lineHeight: 1.25 }}>{headline}</h1>
-          <p className="muted" style={{ fontSize: 15, lineHeight: 1.6, maxWidth: 340 }}>{description}</p>
+          <div className="onboarding-illustration">{illustration}</div>
+          <h1 className="onboarding-headline" style={{ fontWeight: 800, marginTop: 28, marginBottom: 12, lineHeight: 1.25 }}>{headline}</h1>
+          <p className="onboarding-description muted" style={{ lineHeight: 1.6, maxWidth: 340 }}>{description}</p>
         </div>
 
         <div>
@@ -33,6 +34,6 @@ export default function OnboardingLayout({ step, illustration, headline, descrip
           <button className="btn btn-primary" onClick={() => navigate(ctaTo)}>{ctaLabel}</button>
         </div>
       </div>
-    </>
+    </AuthShell>
   );
 }

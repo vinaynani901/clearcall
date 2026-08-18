@@ -13,13 +13,18 @@
     "better-sqlite3": "^11.3.0",
     "clearcall": "file:..",
     "cors": "^2.8.5",
+    "docx": "^9.7.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.19.1",
     "resend": "^4.0.0",
     "twilio": "^5.3.0",
     "uuid": "^9.0.1",
+    "web-push": "^3.6.7",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xml2js": "^0.6.2"
   }
 }

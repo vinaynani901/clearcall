@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const authMiddleware = require('../middleware/auth');
 const { newId } = require('../utils/ids');
+const { getCompanyIdForUser, checkCountLimit } = require('../services/featureFlags');
 
 const router = express.Router();
 
@@ -20,6 +21,18 @@ router.post('/', authMiddleware, (req, res) => {
 
   const id = newId('wp');
   const existingCount = db.prepare('SELECT COUNT(*) as c FROM work_profiles WHERE user_id = ?').get(req.user.id).c;
+
+  const companyId = getCompanyIdForUser(req.user.id);
+  if (companyId) {
+    const check = checkCountLimit('company', companyId, 'work_profiles_limit', existingCount);
+    if (!check.allowed) {
+      return res.status(403).json({
+        error: `Your plan allows up to ${check.limit} work profile${check.limit === 1 ? '' : 's'}. Upgrade to add more.`,
+        featureLocked: true,
+        feature: 'work_profiles_limit',
+      });
+    }
+  }
 
   db.prepare(`
     INSERT INTO work_profiles (id, user_id, designation, organisation, industry_category, is_active, abn_verified)

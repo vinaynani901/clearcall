@@ -20,7 +20,7 @@ export default function CallTypeSheet({ onSelect, onClose }) {
               <div style={{ fontWeight: 800, fontSize: 16 }}>ClearCall Verified Call</div>
             </div>
             <p className="muted small" style={{ margin: '0 0 12px' }}>
-              Recipient sees your company name, logo and role — but never your phone number.
+              The receiver will see your verified company details before answering.
             </p>
             <div className="stack" style={{ gap: 4 }}>
               <div className="row xs" style={{ color: 'var(--green-dark)', fontWeight: 700 }}>✓ Recommended for new contacts</div>
@@ -35,10 +35,10 @@ export default function CallTypeSheet({ onSelect, onClose }) {
           >
             <div className="row mb-8">
               <PhoneIcon size={28} color="#64748b" />
-              <div style={{ fontWeight: 800, fontSize: 16 }}>Normal Phone Call</div>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>Normal Call</div>
             </div>
             <p className="muted small" style={{ margin: '0 0 12px' }}>
-              Standard call with no verification screen.
+              Standard call — receiver sees the masked number only.
             </p>
             <div className="stack" style={{ gap: 4 }}>
               <div className="row xs muted" style={{ fontWeight: 700 }}>✓ For candidates you already know</div>

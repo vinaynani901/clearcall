@@ -51,7 +51,7 @@ export default function WorkProfiles() {
         {loading ? (
           <div className="card muted small">Loading…</div>
         ) : (
-          <div className="stack mb-24">
+          <div className="stack list-grid mb-24">
             {profiles.map((p) => (
               <div
                 key={p.id}

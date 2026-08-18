@@ -6,7 +6,7 @@ const db = require('../db');
 const { newId } = require('../utils/ids');
 const { isPersonalEmailDomain } = require('../utils/emailDomains');
 const authMiddleware = require('../middleware/auth');
-const { sendOtpEmail } = require('../services/resend');
+const { sendOtpEmail, sendJobseekerWelcomeEmail } = require('../services/resend');
 
 const router = express.Router();
 
@@ -27,7 +27,7 @@ const loginLimiter = rateLimit({
 
 // POST /api/auth/signup/jobseeker
 router.post('/signup/jobseeker', (req, res) => {
-  const { fullName, email, phone, password } = req.body;
+  const { fullName, email, phone, password, lookingForWork } = req.body;
 
   if (!fullName || !email || !phone || !password) {
     return res.status(400).json({ error: 'All fields are required: full name, email, phone, password' });
@@ -45,9 +45,9 @@ router.post('/signup/jobseeker', (req, res) => {
   const id = newId('user');
 
   db.prepare(`
-    INSERT INTO users (id, full_name, email, password_hash, phone, role, email_verified)
-    VALUES (?, ?, ?, ?, ?, 'jobseeker', 0)
-  `).run(id, fullName.trim(), email.toLowerCase().trim(), passwordHash, phone.trim());
+    INSERT INTO users (id, full_name, email, password_hash, phone, role, email_verified, looking_for_work)
+    VALUES (?, ?, ?, ?, ?, 'jobseeker', 0, ?)
+  `).run(id, fullName.trim(), email.toLowerCase().trim(), passwordHash, phone.trim(), lookingForWork === false ? 0 : 1);
 
   db.prepare(`
     INSERT INTO call_display_settings (user_id, hide_number, show_name, show_designation, show_photo)
@@ -55,8 +55,25 @@ router.post('/signup/jobseeker', (req, res) => {
   `).run(id);
 
   const token = signToken(id);
-  const user = db.prepare('SELECT id, full_name, email, phone, role, email_verified, created_at FROM users WHERE id = ?').get(id);
+  const { password_hash, ...user } = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   res.status(201).json({ token, user });
+
+  // Fire-and-forget — a failed/unconfigured welcome email must never block
+  // or delay account creation (the response above has already been sent).
+  sendJobseekerWelcomeEmail(user.email, fullName.trim().split(' ')[0])
+    .catch((err) => console.error('[email] Failed to send jobseeker welcome email:', err.message));
+});
+
+// POST /api/auth/signup/jobseeker/google — Google sign-in/signup. Real once
+// GOOGLE_OAUTH_CLIENT_ID/SECRET are configured (same honest "not configured"
+// pattern as Gmail connect and the AI Assistant); left unset, this returns a
+// clear 503 instead of pretending to authenticate anyone.
+router.post('/signup/jobseeker/google', (req, res) => {
+  const configured = !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET);
+  if (!configured) {
+    return res.status(503).json({ error: 'Google sign-in is not configured yet. Please sign up with your email and password instead.' });
+  }
+  res.status(501).json({ error: 'Google OAuth flow not yet implemented.' });
 });
 
 // POST /api/auth/signup/employer
@@ -113,6 +130,48 @@ router.post('/signup/employer', (req, res) => {
   res.status(201).json({ token, user, company });
 });
 
+// POST /api/auth/signup/agent — recruitment agents/agencies get their own
+// role (not employer, not jobseeker). No work-email-domain restriction like
+// employers, since independent recruiters commonly operate from a personal
+// or agency-branded address rather than a corporate one.
+router.post('/signup/agent', (req, res) => {
+  const { agencyName, fullName, email, phone, password, abn } = req.body;
+
+  if (!agencyName || !fullName || !email || !phone || !password) {
+    return res.status(400).json({ error: 'All fields are required: agency name, full name, email, phone, password' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+  if (existing) {
+    return res.status(409).json({ error: 'An account with this email already exists' });
+  }
+
+  const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+  const userId = newId('user');
+
+  const insertUser = db.prepare(`
+    INSERT INTO users (id, full_name, email, password_hash, phone, role, email_verified)
+    VALUES (?, ?, ?, ?, ?, 'agent', 0)
+  `);
+  const insertAgent = db.prepare(`
+    INSERT INTO agents (user_id, agency_name, abn) VALUES (?, ?, ?)
+  `);
+
+  const tx = db.transaction(() => {
+    insertUser.run(userId, fullName.trim(), email.toLowerCase().trim(), passwordHash, phone.trim());
+    insertAgent.run(userId, agencyName.trim(), abn ? abn.replace(/\s/g, '') : null);
+  });
+  tx();
+
+  const token = signToken(userId);
+  const user = db.prepare('SELECT id, full_name, email, phone, role, email_verified, created_at FROM users WHERE id = ?').get(userId);
+  const agent = db.prepare('SELECT * FROM agents WHERE user_id = ?').get(userId);
+  res.status(201).json({ token, user, agent });
+});
+
 // POST /api/auth/login
 router.post('/login', loginLimiter, (req, res) => {
   const { email, password } = req.body;
@@ -123,6 +182,9 @@ router.post('/login', loginLimiter, (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'Invalid email or password' });
+  }
+  if (user.suspended) {
+    return res.status(403).json({ error: 'This account has been deactivated' });
   }
 
   if (user.role === 'employer' && isPersonalEmailDomain(user.email)) {
@@ -160,9 +222,37 @@ router.post('/change-password', authMiddleware, (req, res) => {
   res.json({ message: 'Password changed successfully' });
 });
 
+// POST /api/auth/delete-account — self-service. Historical rows (applications,
+// call records, etc.) reference this user_id all over the platform, so a
+// hard DELETE would either fail on foreign keys or silently orphan/corrupt
+// other people's data (e.g. an employer's call history). Instead this does a
+// real, honest deactivation: the password is confirmed, then the account is
+// suspended and its identifying details (email, phone) are scrubbed so the
+// person can never log in again and isn't reachable — while their historical
+// activity rows stay intact for everyone else's records, same as if the
+// account were simply closed.
+router.post('/delete-account', authMiddleware, (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password is required to delete your account' });
+
+  const fullUser = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!fullUser || !bcrypt.compareSync(password, fullUser.password_hash)) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+
+  const scrubbedEmail = `deleted-${req.user.id}@clearcall.invalid`;
+  const randomPasswordHash = bcrypt.hashSync(newId('deleted'), BCRYPT_ROUNDS);
+  db.prepare(`
+    UPDATE users SET suspended = 1, email = ?, phone = NULL, password_hash = ? WHERE id = ?
+  `).run(scrubbedEmail, randomPasswordHash, req.user.id);
+
+  res.json({ message: 'Your account has been deleted' });
+});
+
 // GET /api/auth/me
 router.get('/me', authMiddleware, (req, res) => {
   let company = null;
+  let agent = null;
   if (req.user.role === 'employer') {
     company = db.prepare(`
       SELECT c.* FROM companies c
@@ -170,8 +260,10 @@ router.get('/me', authMiddleware, (req, res) => {
       WHERE cm.user_id = ?
       LIMIT 1
     `).get(req.user.id);
+  } else if (req.user.role === 'agent') {
+    agent = db.prepare('SELECT * FROM agents WHERE user_id = ?').get(req.user.id);
   }
-  res.json({ user: req.user, company });
+  res.json({ user: req.user, company, agent });
 });
 
 // --- Work email OTP ---

@@ -16,8 +16,8 @@ export default function IncomingUnverifiedCall() {
       </div>
 
       <div className="screen-centered" style={{ flex: 1, padding: '40px 24px' }}>
-        <div style={{ fontWeight: 800, fontSize: 26, marginBottom: 20, letterSpacing: 0.5 }}>{phone}</div>
-        <p className="muted" style={{ fontSize: 15, lineHeight: 1.6, maxWidth: 320 }}>
+        <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 16, color: 'var(--grey-500)' }}>Unknown Caller</div>
+        <p className="muted" style={{ fontSize: 15, lineHeight: 1.6, maxWidth: 320, textAlign: 'center' }}>
           This caller is not verified on ClearCall. Their identity has not been confirmed. Proceed with caution.
         </p>
       </div>
@@ -40,8 +40,17 @@ export default function IncomingUnverifiedCall() {
           </button>
         </div>
       </div>
-      <div className="center xs muted" style={{ paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
+      <div className="center xs muted" style={{ padding: '0 16px 8px' }}>
         If this feels suspicious, decline and report it.
+      </div>
+      <div style={{ padding: '0 24px calc(16px + env(safe-area-inset-bottom))' }}>
+        <button
+          className="btn btn-outline"
+          style={{ borderRadius: 999, color: 'var(--red)', borderColor: 'var(--red)' }}
+          onClick={() => navigate('/report', { state: { reportedPhone: phone } })}
+        >
+          Report This Call
+        </button>
       </div>
     </div>
   );

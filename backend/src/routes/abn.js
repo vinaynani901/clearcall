@@ -5,6 +5,24 @@ const { verifyAbn } = require('../services/abr');
 
 const router = express.Router();
 
+// POST /api/abn/lookup — public, unauthenticated ABR lookup used on the
+// employer Sign Up form itself, before an account exists to attach the
+// result to. Read-only against the government register (no DB writes) so
+// it's safe to expose without a session. The authoritative, DB-persisting
+// verification still happens via POST /api/abn/verify right after the
+// account is created (see AbnVerification.jsx) — this endpoint only powers
+// the live "Verify ABN" button and company-name autofill on the form.
+router.post('/lookup', async (req, res) => {
+  const { abn } = req.body;
+  if (!abn) return res.status(400).json({ error: 'ABN is required' });
+
+  const result = await verifyAbn(abn);
+  if (!result.success) {
+    return res.status(422).json({ error: result.error, abnStatus: result.abnStatus || null });
+  }
+  res.json(result);
+});
+
 // POST /api/abn/verify
 // Body: { abn, companyId (optional), workProfileId (optional) }
 router.post('/verify', authMiddleware, async (req, res) => {

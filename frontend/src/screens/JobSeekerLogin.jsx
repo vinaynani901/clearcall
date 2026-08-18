@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StatusBar, TopHeader, ErrorBanner } from '../components/Shared';
+import AuthShell from '../components/AuthShell';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,7 +29,7 @@ export default function JobSeekerLogin() {
   };
 
   return (
-    <>
+    <AuthShell>
       <StatusBar />
       <div className="screen">
         <TopHeader title="Job Seeker Login" />
@@ -56,6 +57,6 @@ export default function JobSeekerLogin() {
           <button className="link small" onClick={() => navigate('/login/employer')}>Employer Login</button>
         </div>
       </div>
-    </>
+    </AuthShell>
   );
 }

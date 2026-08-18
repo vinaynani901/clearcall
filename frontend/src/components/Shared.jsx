@@ -48,8 +48,8 @@ export function EmployerBottomNav({ active }) {
   const navigate = useNavigate();
   const items = [
     { key: 'dashboard', label: 'Dashboard', icon: HomeIcon, path: '/employer/dashboard' },
-    { key: 'calls', label: 'Calls', icon: CallsIcon, path: '/employer/calls' },
-    { key: 'candidates', label: 'Candidates', icon: CandidatesIcon, path: '/employer/dashboard' },
+    { key: 'calls', label: 'Calls', icon: CallsIcon, path: '/employer/make-call' },
+    { key: 'candidates', label: 'Campaigns', icon: CandidatesIcon, path: '/employer/campaigns' },
     { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings' },
   ];
   return (
@@ -82,6 +82,21 @@ export function ErrorBanner({ message }) {
       marginBottom: 16,
     }}>
       {message}
+    </div>
+  );
+}
+
+export function ConfirmDialog({ title, message, confirmLabel = 'Confirm', onConfirm, onCancel }) {
+  return (
+    <div className="sheet-backdrop" onClick={onCancel}>
+      <div className="sheet" style={{ borderRadius: 20, maxWidth: 360, margin: '0 auto' }} onClick={(e) => e.stopPropagation()}>
+        <div className="bold" style={{ fontSize: 16, marginBottom: 8 }}>{title}</div>
+        <p className="muted small" style={{ margin: '0 0 20px' }}>{message}</p>
+        <div className="row" style={{ gap: 10 }}>
+          <button className="btn btn-grey" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-red" onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
     </div>
   );
 }

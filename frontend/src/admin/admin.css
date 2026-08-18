@@ -1,0 +1,574 @@
+/* ClearCall Super Admin Panel — completely separate stylesheet from the
+   main app's index.css. Desktop-only by design; no mobile breakpoints. */
+
+.admin-app {
+  --a-navy: #1e3a8a;
+  --a-navy-dark: #0f1e4d;
+  --a-sidebar: #0d1526;
+  --a-green: #10b981;
+  --a-green-dark: #059669;
+  --a-red: #ef4444;
+  --a-orange: #f59e0b;
+  --a-yellow: #eab308;
+  --a-grey-bg: #f1f5f9;
+  --a-grey-100: #f8fafc;
+  --a-grey-200: #e2e8f0;
+  --a-grey-400: #94a3b8;
+  --a-grey-500: #64748b;
+  --a-grey-700: #334155;
+  --a-ink: #0f172a;
+  --a-radius: 12px;
+  --a-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+
+  /* Futuristic dark palette — used by the top bar, sidebar, and the
+     Command Centre page's own dark content area. Kept as separate
+     variables (not a replacement of the light --a-* tokens above) so
+     every other portal's existing light cards/tables are untouched. */
+  --a-dark-bg: #0a0f1e;
+  --a-dark-sidebar: #0d1526;
+  --a-dark-card: #111c35;
+  --a-dark-card-border: rgba(59, 130, 246, 0.16);
+  --a-electric-blue: #3b82f6;
+  --a-purple: #a855f7;
+  --a-text-secondary: #94a3b8;
+  --a-glow-blue: rgba(59, 130, 246, 0.45);
+  --a-glow-green: rgba(16, 185, 129, 0.45);
+  --a-glow-orange: rgba(245, 158, 11, 0.45);
+  --a-glow-red: rgba(239, 68, 68, 0.45);
+  --a-glow-purple: rgba(168, 85, 247, 0.45);
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--a-ink);
+  min-width: 1180px;
+}
+
+@keyframes adminPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes adminGlowPulse {
+  0%, 100% { box-shadow: 0 0 6px currentColor; }
+  50% { box-shadow: 0 0 16px currentColor; }
+}
+
+/* ---- Login screen ---- */
+.admin-login-screen {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--a-navy) 0%, var(--a-navy-dark) 100%);
+}
+.admin-login-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 40px;
+  width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.admin-login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.admin-login-title { font-size: 18px; font-weight: 800; color: var(--a-navy); }
+.admin-login-subtitle { font-size: 12px; font-weight: 600; color: var(--a-grey-500); }
+.admin-login-note { margin-top: 20px; font-size: 12px; color: var(--a-grey-400); text-align: center; line-height: 1.5; }
+
+/* ---- Shell / topbar / sidebar / main ---- */
+/* overflow-x: hidden here is a deliberate safety net, not just a fix for
+   one bug — flex/grid children with nowrap text or fixed-size SVGs can
+   silently force their container wider than the viewport (as happened
+   with the sparklines and the verification-queue company names), turning
+   the whole admin panel into a horizontally-scrolling page instead of a
+   fixed dashboard. Capping it at the shell level means any future
+   overflow like that clips instead of dragging the entire layout sideways. */
+.admin-shell-v2 { display: flex; flex-direction: column; min-height: 100vh; width: 100%; max-width: 100vw; overflow-x: hidden; }
+.admin-shell { display: flex; flex: 1; min-height: 0; width: 100%; min-width: 0; }
+
+.admin-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--a-dark-sidebar);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  position: sticky;
+  top: var(--a-topbar-h, 64px);
+  height: calc(100vh - var(--a-topbar-h, 64px));
+  overflow-y: auto;
+  border-right: 1px solid rgba(59, 130, 246, 0.08);
+}
+.admin-sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 8px; margin-bottom: 28px; }
+.admin-sidebar-logo-mark {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  position: relative;
+}
+/* Soft pulsing halo behind the shield mark, plus a slow continuous spin on
+   the icon itself. Full 360deg rotation is safe here (unlike the AuthShell
+   Y-axis 3D spin) because this is a flat 2D rotation of a symmetric-enough
+   glyph, so there's no edge-on/invisible frame. */
+.admin-sidebar-logo-mark::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.55) 0%, rgba(59, 130, 246, 0) 70%);
+  animation: adminLogoPulse 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.admin-sidebar-logo-mark svg {
+  position: relative;
+  z-index: 1;
+  animation: adminLogoSpin 6s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.65));
+  transform-origin: 50% 50%;
+}
+@keyframes adminLogoPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+@keyframes adminLogoSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.admin-sidebar-logo-title { font-size: 15px; font-weight: 800; color: #fff; line-height: 1.2; }
+.admin-sidebar-logo-subtitle { font-size: 11px; color: #93a5d1; font-weight: 600; }
+
+.admin-sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.admin-sidebar-link {
+  display: flex; align-items: center; gap: 10px;
+  background: none; border: none; color: #c3ceec;
+  font-size: 13.5px; font-weight: 600; text-align: left;
+  padding: 10px 10px; border-radius: 9px; cursor: pointer;
+  width: 100%;
+}
+.admin-sidebar-link:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.admin-sidebar-link.active {
+  background: rgba(59, 130, 246, 0.14); color: #fff;
+  border-left: 3px solid var(--a-electric-blue); padding-left: 7px;
+  box-shadow: inset 0 0 24px rgba(59, 130, 246, 0.14);
+}
+.admin-sidebar-link-icon { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
+.admin-sidebar-link-label { flex: 1; }
+.admin-nav-badge {
+  background: var(--a-red); color: #fff; font-size: 10.5px; font-weight: 800;
+  padding: 2px 7px; border-radius: 999px; flex-shrink: 0;
+}
+.admin-nav-badge.urgent { background: #b91c1c; }
+
+.admin-sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 14px; margin-top: 14px; }
+.admin-sidebar-profile { display: flex; align-items: center; gap: 10px; padding: 8px 6px; margin-bottom: 8px; }
+.admin-sidebar-avatar {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; position: relative;
+  background: linear-gradient(135deg, var(--a-electric-blue), var(--a-purple));
+  display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 14px;
+}
+.admin-sidebar-online-dot {
+  position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--a-green); border: 2px solid var(--a-dark-sidebar); box-shadow: 0 0 6px var(--a-green);
+}
+.admin-sidebar-profile-name { font-size: 13px; font-weight: 800; color: #fff; line-height: 1.3; }
+.admin-sidebar-profile-title { font-size: 11px; color: var(--a-text-secondary); font-weight: 600; }
+.admin-sidebar-email { font-size: 12px; color: #93a5d1; padding: 0 6px; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-sidebar-logout {
+  width: 100%; background: none; border: none; color: #fca5a5; font-size: 13px; font-weight: 700;
+  padding: 8px 10px; border-radius: 9px; cursor: pointer; text-align: left;
+}
+.admin-sidebar-logout:hover { background: rgba(239, 68, 68, 0.12); }
+
+.admin-main { flex: 1; min-width: 0; background: var(--a-grey-bg); padding: 32px 40px 60px; }
+
+/* ---- Top bar (shared across every /admin page) ---- */
+/* Branding lives in the sidebar only (its logo block already carries the
+   "Super Admin" identity) — the top bar is a slim status/utility strip, so
+   the status pill is absolutely centered rather than relying on a
+   brand-block sibling to balance a space-between layout. */
+.admin-topbar {
+  --a-topbar-h: 64px;
+  position: relative;
+  display: flex; align-items: center; justify-content: flex-end;
+  height: var(--a-topbar-h);
+  background: var(--a-dark-sidebar); border-bottom: 1px solid rgba(59, 130, 246, 0.12);
+  padding: 0 28px; flex-shrink: 0; z-index: 60;
+}
+
+.admin-topbar-status {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.admin-topbar-status-row { display: flex; align-items: center; gap: 7px; }
+.admin-topbar-pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--a-green); flex-shrink: 0;
+  box-shadow: 0 0 8px var(--a-green); animation: adminPulse 1.8s infinite;
+}
+.admin-topbar-status-row.down .admin-topbar-pulse-dot { background: var(--a-red); box-shadow: 0 0 8px var(--a-red); }
+.admin-topbar-status-label { font-size: 12.5px; font-weight: 800; color: var(--a-green); letter-spacing: 0.03em; }
+.admin-topbar-status-row.down .admin-topbar-status-label { color: var(--a-red); }
+.admin-topbar-status-sub { font-size: 11px; color: var(--a-text-secondary); }
+
+.admin-topbar-right { display: flex; align-items: center; gap: 18px; }
+.admin-topbar-clock { text-align: right; }
+.admin-topbar-time { font-size: 15px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.admin-topbar-date { font-size: 11px; color: var(--a-text-secondary); }
+
+.admin-topbar-bell {
+  position: relative; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; color: #fff;
+}
+.admin-topbar-bell:hover { background: rgba(255, 255, 255, 0.08); }
+.admin-topbar-bell-badge {
+  position: absolute; top: -5px; right: -5px; background: var(--a-orange); color: #fff; font-size: 10px;
+  font-weight: 800; min-width: 16px; height: 16px; border-radius: 999px; display: flex; align-items: center;
+  justify-content: center; padding: 0 3px; box-shadow: 0 0 8px var(--a-glow-orange);
+}
+
+.admin-topbar-notif-dropdown {
+  position: absolute; top: calc(100% + 10px); right: 0; width: 320px; max-height: 380px; overflow-y: auto;
+  background: var(--a-panel-bg, #131a2c); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); padding: 10px; z-index: 50; text-align: left;
+}
+.admin-topbar-notif-title { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--a-text-secondary); padding: 4px 8px 8px; }
+.admin-topbar-notif-item {
+  width: 100%; display: block; text-align: left; background: none; border: none; color: #fff; cursor: pointer;
+  padding: 10px 8px; border-radius: 8px; font-size: 13px; line-height: 1.4;
+}
+.admin-topbar-notif-item:hover { background: rgba(255, 255, 255, 0.06); }
+.admin-topbar-notif-empty { padding: 14px 8px; font-size: 12.5px; color: var(--a-text-secondary); }
+
+.admin-topbar-profile { display: flex; align-items: center; gap: 10px; padding-left: 16px; border-left: 1px solid rgba(255, 255, 255, 0.1); }
+.admin-topbar-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--a-electric-blue), var(--a-purple));
+  display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 13px;
+}
+.admin-topbar-profile-name { font-size: 13px; font-weight: 800; color: #fff; line-height: 1.3; }
+.admin-topbar-profile-title { font-size: 11px; color: var(--a-text-secondary); }
+
+/* ---- Page chrome ---- */
+.admin-page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.admin-page-title { font-size: 22px; font-weight: 800; color: var(--a-ink); }
+.admin-page-subtitle { font-size: 13px; color: var(--a-grey-500); margin-top: 2px; }
+
+.admin-card { background: #fff; border-radius: var(--a-radius); padding: 22px; box-shadow: var(--a-shadow); }
+.admin-card + .admin-card { margin-top: 16px; }
+
+/* ---- Buttons / fields ---- */
+.admin-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 18px; border-radius: 9px; border: none; font-size: 13.5px; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s ease;
+}
+.admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin-btn-primary { background: var(--a-navy); color: #fff; }
+.admin-btn-green { background: var(--a-green); color: #fff; }
+.admin-btn-danger { background: var(--a-red); color: #fff; }
+.admin-btn-orange { background: var(--a-orange); color: #fff; }
+.admin-btn-outline { background: #fff; color: var(--a-navy); border: 1.5px solid var(--a-grey-200); }
+.admin-btn-outline:hover { border-color: var(--a-navy); }
+.admin-btn-sm { padding: 6px 12px; font-size: 12.5px; }
+
+.admin-link { color: var(--a-navy); font-weight: 700; background: none; border: none; cursor: pointer; font-size: inherit; }
+
+.admin-field { margin-bottom: 14px; text-align: left; }
+.admin-field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--a-grey-700); margin-bottom: 5px; }
+.admin-field input, .admin-field select, .admin-field textarea {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--a-grey-200); border-radius: 8px;
+  font-size: 14px; background: #fff; color: var(--a-ink); outline: none; font-family: inherit;
+}
+.admin-field input:focus, .admin-field select:focus, .admin-field textarea:focus { border-color: var(--a-navy); }
+
+.admin-search-input { position: relative; display: flex; align-items: center; }
+.admin-search-input input { padding-left: 32px; }
+.admin-search-input .icon { position: absolute; left: 10px; color: var(--a-grey-400); font-size: 13px; }
+
+.admin-error-banner {
+  background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: #b91c1c;
+  padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px;
+}
+
+.admin-row { display: flex; align-items: center; }
+
+/* ---- Filter tabs ---- */
+.admin-tabs { display: flex; gap: 4px; background: var(--a-grey-200); padding: 4px; border-radius: 10px; width: fit-content; margin-bottom: 18px; }
+.admin-tab { background: none; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--a-grey-500); cursor: pointer; }
+.admin-tab.active { background: #fff; color: var(--a-navy); box-shadow: var(--a-shadow); }
+
+/* ---- Stat cards ---- */
+.admin-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.admin-stat-card { background: #fff; border-radius: var(--a-radius); padding: 18px 20px; box-shadow: var(--a-shadow); }
+.admin-stat-label { font-size: 11.5px; font-weight: 800; color: var(--a-grey-500); text-transform: uppercase; letter-spacing: 0.02em; }
+.admin-stat-value { font-size: 26px; font-weight: 800; color: var(--a-ink); margin-top: 6px; }
+.admin-stat-sub { font-size: 12px; color: var(--a-grey-500); margin-top: 4px; }
+.admin-stat-card.tone-red .admin-stat-value { color: var(--a-red); }
+.admin-stat-card.tone-green .admin-stat-value { color: var(--a-green); }
+
+/* ---- System health bar ---- */
+.admin-health-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+.admin-health-pill {
+  display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px;
+  padding: 8px 16px; box-shadow: var(--a-shadow); font-size: 13px; font-weight: 700;
+}
+.admin-health-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.admin-health-dot.operational { background: var(--a-green); }
+.admin-health-dot.down { background: var(--a-red); }
+
+/* ---- Needs attention ---- */
+.admin-attention-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px;
+  background: var(--a-grey-100); cursor: pointer; text-align: left; width: 100%; border: none;
+  font-family: inherit;
+}
+.admin-attention-item + .admin-attention-item { margin-top: 8px; }
+.admin-attention-item:hover { background: var(--a-grey-200); }
+.admin-attention-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.admin-attention-dot.red { background: var(--a-red); }
+.admin-attention-dot.orange { background: var(--a-orange); }
+.admin-attention-dot.yellow { background: var(--a-yellow); }
+.admin-attention-category { font-size: 11px; font-weight: 800; color: var(--a-grey-500); text-transform: uppercase; }
+.admin-attention-label { font-size: 13.5px; font-weight: 700; color: var(--a-ink); }
+
+/* ---- Badges ---- */
+.admin-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+.admin-badge.tone-red { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+.admin-badge.tone-orange { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+.admin-badge.tone-yellow { background: rgba(234, 179, 8, 0.16); color: #854d0e; }
+.admin-badge.tone-grey { background: var(--a-grey-200); color: var(--a-grey-700); }
+.admin-badge.tone-green { background: rgba(16, 185, 129, 0.12); color: var(--a-green-dark); }
+.admin-badge.tone-navy { background: rgba(30, 58, 138, 0.1); color: var(--a-navy); }
+
+/* ---- Table ---- */
+.admin-table-wrap { background: #fff; border-radius: var(--a-radius); box-shadow: var(--a-shadow); overflow: hidden; }
+.admin-table-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--a-grey-200); }
+.admin-table-count { font-size: 12.5px; font-weight: 700; color: var(--a-grey-500); }
+.admin-table-scroll { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.admin-table th {
+  text-align: left; padding: 12px 16px; font-size: 11.5px; font-weight: 800; color: var(--a-grey-500);
+  text-transform: uppercase; letter-spacing: 0.02em; border-bottom: 1px solid var(--a-grey-200);
+  white-space: nowrap; user-select: none;
+}
+.admin-table th.sortable { cursor: pointer; }
+.admin-table th.sortable:hover { color: var(--a-navy); }
+.admin-sort-arrow { font-size: 10px; }
+.admin-table td { padding: 12px 16px; border-bottom: 1px solid var(--a-grey-100); vertical-align: middle; }
+.admin-table tbody tr:hover { background: var(--a-grey-100); }
+.admin-table-empty { text-align: center; padding: 32px; color: var(--a-grey-500); font-size: 13.5px; }
+.admin-table-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 14px; border-top: 1px solid var(--a-grey-200); }
+.admin-pagination-label { font-size: 12.5px; font-weight: 700; color: var(--a-grey-500); }
+
+/* ---- Three dot menu ---- */
+.admin-three-dot-trigger { background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 16px; border-radius: 6px; color: var(--a-grey-500); }
+.admin-three-dot-trigger:hover { background: var(--a-grey-200); }
+.admin-three-dot-popup {
+  position: absolute; top: calc(100% + 4px); min-width: 210px; background: #fff; border: 1px solid var(--a-grey-200);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16); padding: 6px; z-index: 50; display: flex; flex-direction: column;
+}
+.admin-three-dot-item { background: none; border: none; text-align: left; padding: 9px 10px; font-size: 13px; font-weight: 600; color: var(--a-grey-700); border-radius: 7px; cursor: pointer; }
+.admin-three-dot-item:hover { background: var(--a-grey-100); }
+.admin-three-dot-item.danger { color: var(--a-red); }
+.admin-three-dot-item:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---- Side panel / modal ---- */
+.admin-panel-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 100; display: flex; justify-content: flex-end; }
+.admin-side-panel { width: 480px; max-width: 90vw; background: #fff; height: 100vh; overflow-y: auto; box-shadow: -8px 0 30px rgba(0, 0, 0, 0.2); }
+.admin-side-panel.wide { width: 620px; }
+.admin-side-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--a-grey-200); position: sticky; top: 0; background: #fff; z-index: 2; }
+.admin-side-panel-title { font-size: 16px; font-weight: 800; }
+.admin-panel-close { background: none; border: none; font-size: 15px; cursor: pointer; color: var(--a-grey-500); padding: 4px 8px; }
+.admin-side-panel-body { padding: 24px; }
+
+.admin-modal { background: #fff; border-radius: 16px; width: 100%; margin: auto; align-self: center; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); }
+.admin-modal-body { padding: 24px; }
+.admin-confirm-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+.admin-confirm-message { font-size: 13.5px; color: var(--a-grey-700); line-height: 1.5; margin: 0 0 18px; }
+
+/* ---- Detail rows (side panel content) ---- */
+.admin-detail-section { margin-bottom: 22px; }
+.admin-detail-section-title { font-size: 11.5px; font-weight: 800; color: var(--a-grey-500); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.02em; }
+.admin-detail-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--a-grey-100); font-size: 13.5px; }
+.admin-detail-row:last-child { border-bottom: none; }
+.admin-detail-row .label { color: var(--a-grey-500); font-weight: 600; }
+.admin-detail-row .value { font-weight: 700; text-align: right; }
+
+.admin-recruiter-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--a-grey-100); }
+.admin-recruiter-row:last-child { border-bottom: none; }
+
+/* ---- Verification queue entries ---- */
+.admin-vq-entry { background: #fff; border-radius: var(--a-radius); box-shadow: var(--a-shadow); padding: 20px 22px; margin-bottom: 14px; }
+.admin-vq-flags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ---- Pilot impact report (printable) ---- */
+.admin-print-report { background: #fff; border: 1px solid var(--a-grey-200); border-radius: var(--a-radius); padding: 32px; }
+.report-header { text-align: center; border-bottom: 2px solid var(--a-navy); padding-bottom: 20px; margin-bottom: 24px; }
+.report-logo { font-size: 13px; font-weight: 800; color: var(--a-green-dark); letter-spacing: 0.05em; text-transform: uppercase; }
+.report-title { font-size: 20px; font-weight: 800; color: var(--a-navy); margin-top: 6px; }
+.report-sub { font-size: 13px; color: var(--a-grey-500); margin-top: 4px; }
+.report-section { margin-bottom: 24px; }
+.report-section-title { font-size: 13.5px; font-weight: 800; color: var(--a-ink); margin-bottom: 10px; }
+.report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.report-table th, .report-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--a-grey-200); }
+.report-table th { color: var(--a-grey-500); font-weight: 700; font-size: 11.5px; text-transform: uppercase; }
+.report-note { font-size: 12px; color: var(--a-grey-500); margin-top: 8px; font-style: italic; }
+.report-summary { font-size: 13.5px; line-height: 1.7; color: var(--a-ink); }
+
+@media print {
+  body * { visibility: hidden; }
+  .admin-print-report, .admin-print-report * { visibility: visible; }
+  .admin-print-report { position: absolute; top: 0; left: 0; width: 100%; border: none; }
+}
+
+/* ---- Coming soon placeholder ---- */
+.admin-coming-soon { background: #fff; border-radius: var(--a-radius); box-shadow: var(--a-shadow); padding: 64px; text-align: center; }
+.admin-coming-soon .icon { font-size: 40px; margin-bottom: 16px; }
+.admin-coming-soon .title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+.admin-coming-soon .desc { font-size: 13.5px; color: var(--a-grey-500); max-width: 420px; margin: 0 auto; line-height: 1.6; }
+.admin-coming-soon .note { font-size: 12px; color: var(--a-grey-400); margin-top: 18px; }
+
+/* ==== Command Centre — futuristic mission-control dashboard ==== */
+.cc-page { background: var(--a-dark-bg); margin: -32px -40px -60px; padding: 28px 32px 60px; min-height: 100vh; color: #fff; }
+
+.cc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; }
+.cc-title { font-size: 22px; font-weight: 800; color: #fff; }
+.cc-subtitle { font-size: 13px; color: var(--a-text-secondary); margin-top: 3px; }
+.cc-updated { font-size: 11.5px; color: var(--a-text-secondary); margin-top: 4px; }
+.cc-empty { color: var(--a-text-secondary); font-size: 13px; padding: 16px 0; text-align: center; }
+
+/* ---- Stat cards ---- */
+.cc-stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 20px; }
+.cc-stat-card {
+  background: var(--a-dark-card); border: 1px solid var(--a-dark-card-border); border-radius: 14px;
+  padding: 16px 16px 12px; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
+}
+.cc-stat-card:hover { transform: translateY(-2px); border-color: rgba(59, 130, 246, 0.45); }
+.cc-stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cc-stat-icon {
+  width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; opacity: 0.9; box-shadow: 0 0 14px currentColor;
+}
+.cc-stat-delta { font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 2px; }
+.cc-stat-delta.up { color: var(--a-green); }
+.cc-stat-delta.down { color: var(--a-red); }
+.cc-stat-label { font-size: 10.5px; font-weight: 700; color: var(--a-text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+.cc-stat-value { font-size: 23px; font-weight: 800; color: #fff; margin-top: 4px; }
+.cc-stat-sub { font-size: 11px; color: var(--a-orange); font-weight: 700; margin-top: 3px; }
+.cc-stat-sub-muted { color: var(--a-text-secondary); font-weight: 600; }
+.cc-stat-spark { margin-top: 8px; }
+
+/* ---- Rows / panels ---- */
+.cc-row { display: grid; gap: 16px; margin-bottom: 16px; min-width: 0; }
+/* auto-fit/minmax instead of a fixed repeat(3, 1fr) + magic-number media
+   query breakpoint: a hardcoded 1500px breakpoint doesn't account for the
+   260px sidebar eating into available width, browser zoom, or OS scaling,
+   so real windows just above 1500px were still trying to force 3 full
+   panels (gauges, hotspot map, AI widget) into a space that didn't fit,
+   pushing the page wider than the viewport. auto-fit lets each panel keep
+   a sane minimum width and wrap to 2 or 1 per row automatically whenever
+   the actual available space can't fit 3, at any width. */
+.cc-row-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.cc-panel {
+  background: var(--a-dark-card); border: 1px solid var(--a-dark-card-border); border-radius: 14px;
+  padding: 18px 20px; display: flex; flex-direction: column; min-width: 0;
+}
+.cc-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cc-panel-title { font-size: 12px; font-weight: 800; color: #fff; letter-spacing: 0.04em; }
+.cc-link-btn { background: none; border: none; color: var(--a-electric-blue); font-size: 10.5px; font-weight: 800; cursor: pointer; letter-spacing: 0.03em; }
+.cc-view-all {
+  background: none; border: none; color: var(--a-electric-blue); font-size: 11.5px; font-weight: 800;
+  cursor: pointer; text-align: left; margin-top: 10px; padding: 0;
+}
+
+.cc-live-badge { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; color: var(--a-green); letter-spacing: 0.03em; }
+.cc-live-badge-red { color: var(--a-red); }
+.cc-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--a-green); box-shadow: 0 0 8px var(--a-green); animation: adminPulse 1.6s infinite; }
+.cc-live-dot-red { background: var(--a-red); box-shadow: 0 0 8px var(--a-red); }
+
+/* ---- Activity feed ---- */
+.cc-activity-list { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; }
+.cc-activity-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 6px; border-radius: 8px; cursor: pointer; }
+.cc-activity-row:hover { background: rgba(255, 255, 255, 0.04); }
+.cc-activity-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.cc-activity-desc { font-size: 12.5px; color: #e2e8f0; line-height: 1.4; }
+.cc-activity-time { font-size: 10.5px; color: var(--a-text-secondary); margin-top: 2px; }
+
+/* ---- Verification queue mini ---- */
+.cc-vq-mini-list { display: flex; flex-direction: column; gap: 10px; }
+.cc-vq-row { background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.cc-vq-row:hover { background: rgba(255, 255, 255, 0.06); }
+.cc-vq-row-danger { border-color: rgba(239, 68, 68, 0.35); box-shadow: 0 0 14px rgba(239, 68, 68, 0.1); }
+.cc-vq-row-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+/* min-width: 0 is required here — without it, a flex child with
+   white-space: nowrap keeps its full text width as its minimum size, which
+   silently defeats text-overflow: ellipsis and forces the whole card (and
+   the grid row it sits in) wider than the viewport instead of truncating. */
+.cc-vq-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-vq-agebar-track { height: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.cc-vq-agebar-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+.cc-vq-age-label { font-size: 10.5px; color: var(--a-text-secondary); margin-top: 5px; }
+
+/* ---- Revenue overview ---- */
+.cc-mrr-value { font-size: 30px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+.cc-mrr-delta { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.cc-mrr-delta.up { color: var(--a-green); }
+.cc-mrr-delta.down { color: var(--a-red); }
+
+/* ---- System health gauges ---- */
+.cc-gauge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; margin-bottom: 12px; min-width: 0; }
+.cc-gauge-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.cc-gauge-name { font-size: 10.5px; color: var(--a-text-secondary); font-weight: 700; text-align: center; }
+.cc-health-footer { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.03em; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); color: var(--a-green); }
+.cc-health-footer.warn { color: var(--a-orange); }
+
+/* ---- Scam map ---- */
+.cc-map-layout { display: flex; gap: 14px; align-items: flex-start; }
+.cc-map-layout svg { flex: 1; min-width: 0; }
+.cc-hotspot-list { width: 120px; flex-shrink: 0; }
+.cc-hotspot-list-title { font-size: 9.5px; font-weight: 800; color: var(--a-text-secondary); letter-spacing: 0.04em; margin-bottom: 8px; }
+.cc-hotspot-row { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #e2e8f0; }
+.cc-hotspot-count { font-weight: 800; color: #fff; }
+.cc-map-legend { display: flex; gap: 14px; justify-content: center; margin-top: 10px; font-size: 10.5px; color: var(--a-text-secondary); font-weight: 700; }
+.cc-map-legend span { display: flex; align-items: center; gap: 5px; }
+.cc-map-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* ---- AI assistant mini widget ---- */
+.cc-ai-panel { align-items: stretch; }
+.cc-ai-badge { background: rgba(59, 130, 246, 0.15); color: var(--a-electric-blue); font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.03em; }
+.cc-ai-avatar-wrap { display: flex; justify-content: center; padding: 10px 0 16px; }
+.cc-ai-avatar {
+  width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--a-electric-blue), var(--a-purple));
+  display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; position: relative;
+  box-shadow: 0 0 24px var(--a-glow-blue);
+}
+.cc-ai-ring { position: absolute; inset: -8px; border-radius: 50%; border: 1px solid rgba(59, 130, 246, 0.4); animation: ccRingPulse 2.4s infinite; }
+.cc-ai-ring-2 { inset: -16px; animation-delay: 0.6s; }
+@keyframes ccRingPulse { 0% { opacity: 0.7; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.25); } }
+.cc-ai-greeting { text-align: center; font-size: 12.5px; color: #e2e8f0; line-height: 1.5; padding: 0 6px; margin-bottom: 16px; flex: 1; }
+.cc-ai-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+/* min-width: 0 is required — a text input's default intrinsic minimum
+   width (~170-200px) otherwise wins over flex:1, forcing this row (and
+   the whole bottom row of the dashboard) wider than the viewport. Same
+   class of bug as the verification-queue company names above. */
+.cc-ai-input-row input {
+  flex: 1; min-width: 0; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px;
+  padding: 9px 12px; color: #fff; font-size: 12.5px; outline: none;
+}
+.cc-ai-input-row input::placeholder { color: var(--a-text-secondary); }
+.cc-ai-input-row input:focus { border-color: var(--a-electric-blue); }
+.cc-ai-input-row button {
+  background: var(--a-electric-blue); border: none; border-radius: 9px; width: 38px; color: #fff; font-size: 14px; cursor: pointer;
+  box-shadow: 0 0 12px var(--a-glow-blue);
+}
+.cc-ai-status { display: flex; align-items: center; gap: 6px; justify-content: center; font-size: 10.5px; font-weight: 800; color: var(--a-green); letter-spacing: 0.03em; }
+
+@media (max-width: 1500px) {
+  .cc-stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+/* .cc-row-3 no longer needs a breakpoint override here — it's auto-fit
+   based now (see the rule above), so it reflows to 2 or 1 columns on its
+   own at whatever width actually runs out of room. */
+
+/* ---- Revenue trend chart (pure CSS, no charting library) ---- */
+.admin-revenue-chart { display: flex; align-items: flex-end; gap: 10px; height: 200px; padding-top: 8px; }
+.admin-revenue-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; min-width: 0; }
+.admin-revenue-bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.admin-revenue-bar { width: 100%; background: linear-gradient(180deg, var(--a-navy) 0%, var(--a-navy-dark) 100%); border-radius: 5px 5px 0 0; min-height: 3px; transition: height 0.2s ease; }
+.admin-revenue-bar-value { font-size: 10.5px; font-weight: 700; color: var(--a-grey-700); margin-top: 6px; white-space: nowrap; }
+.admin-revenue-bar-label { font-size: 10.5px; color: var(--a-grey-400); margin-top: 2px; white-space: nowrap; }

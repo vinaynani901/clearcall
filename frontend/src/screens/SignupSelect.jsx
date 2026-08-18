@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { StatusBar } from '../components/Shared';
 import { ShieldCheck } from '../components/Icons';
+import AuthShell from '../components/AuthShell';
 
 export default function SignupSelect() {
   const navigate = useNavigate();
   return (
-    <>
+    <AuthShell>
       <StatusBar />
       <div className="screen">
         <div className="screen-centered" style={{ marginBottom: 12 }}>
@@ -28,11 +29,16 @@ export default function SignupSelect() {
           </div>
         </div>
 
+        <div className="center" style={{ paddingTop: 4 }}>
+          <span className="small muted">Recruitment agency? </span>
+          <button className="link small" onClick={() => navigate('/signup/agent')}>Sign up here</button>
+        </div>
+
         <div className="center mt-auto" style={{ paddingTop: 20 }}>
           <span className="small muted">Already have an account? </span>
           <button className="link small" onClick={() => navigate('/login/jobseeker')}>Log In</button>
         </div>
       </div>
-    </>
+    </AuthShell>
   );
 }

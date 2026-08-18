@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StatusBar } from '../components/Shared';
 import { CheckCircle, XCircle } from '../components/Icons';
+import AuthShell from '../components/AuthShell';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -42,7 +43,7 @@ export default function AbnVerification() {
   }, [abn, companyId, setCompany]);
 
   return (
-    <>
+    <AuthShell>
       <StatusBar />
       <div className="screen screen-centered" style={{ flex: 1 }}>
         {status === 'loading' && (
@@ -88,6 +89,6 @@ export default function AbnVerification() {
           </>
         )}
       </div>
-    </>
+    </AuthShell>
   );
 }

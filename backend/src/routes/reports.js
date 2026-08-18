@@ -16,12 +16,23 @@ const VALID_REASONS = [
 
 // POST /api/reports
 router.post('/', authMiddleware, (req, res) => {
-  const { reportedCompanyId, reportedPhone, reason, description, callId } = req.body;
+  let { reportedCompanyId, reportedPhone, callId } = req.body;
+  const { reason, description } = req.body;
   if (!reason || !VALID_REASONS.includes(reason)) {
     return res.status(400).json({ error: `Reason must be one of: ${VALID_REASONS.join(', ')}` });
   }
-  if (!reportedCompanyId && !reportedPhone) {
-    return res.status(400).json({ error: 'Either reportedCompanyId or reportedPhone is required' });
+
+  // A job seeker reporting a call they RECEIVED (e.g. from the Call
+  // Protection screen) only ever has the call's id — never a phone number,
+  // by design. Resolve the company from the call record itself server-side
+  // rather than requiring the client to supply one.
+  if (!reportedCompanyId && !reportedPhone && callId) {
+    const call = db.prepare('SELECT company_id FROM calls WHERE id = ? AND receiver_user_id = ?').get(callId, req.user.id);
+    if (call?.company_id) reportedCompanyId = call.company_id;
+  }
+
+  if (!reportedCompanyId && !reportedPhone && !callId) {
+    return res.status(400).json({ error: 'Either reportedCompanyId, reportedPhone, or callId is required' });
   }
 
   const id = newId('report');

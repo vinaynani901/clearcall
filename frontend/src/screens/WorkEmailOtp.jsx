@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StatusBar, ErrorBanner } from '../components/Shared';
+import AuthShell from '../components/AuthShell';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -50,7 +51,7 @@ export default function WorkEmailOtp() {
   };
 
   return (
-    <>
+    <AuthShell>
       <StatusBar />
       <div className="screen screen-centered" style={{ flex: 1 }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>📧</div>
@@ -92,6 +93,6 @@ export default function WorkEmailOtp() {
           The code expires in 10 minutes. This verifies you are employed at this company.
         </div>
       </div>
-    </>
+    </AuthShell>
   );
 }

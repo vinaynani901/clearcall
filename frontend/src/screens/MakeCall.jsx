@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Device } from '@twilio/voice-sdk';
-import { StatusBar, TopHeader, ErrorBanner } from '../components/Shared';
+import { StatusBar, TopHeader, ErrorBanner, EmployerBottomNav } from '../components/Shared';
 import CallTypeSheet from '../components/CallTypeSheet';
+import CampaignCallPanel from '../components/CampaignCallPanel';
 import { ShieldCheck, MicIcon, HangUpIcon } from '../components/Icons';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -13,11 +14,32 @@ function formatTime(totalSeconds) {
   return `${m}:${s}`;
 }
 
+// The 12 default outcome/tag labels double as the call_status enum's source
+// data — map each to the DB's simpler call_status column so campaign rows
+// stay queryable ("not_called" / "answered" / "no_answer" / "voicemail")
+// while the richer label lives in outcome/tags.
+function outcomeToCallStatus(outcome) {
+  if (outcome === 'Not Answered') return 'no_answer';
+  if (outcome === 'Went to Voicemail') return 'voicemail';
+  if (outcome) return 'answered';
+  return 'answered';
+}
+
 export default function MakeCall() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { company } = useAuth();
+  const prefill = location.state?.prefill;
+  const campaignId = location.state?.campaignId || null;
+  const candidateId = location.state?.candidateId || null;
+
   const [profiles, setProfiles] = useState([]);
-  const [form, setForm] = useState({ receiverName: '', receiverPhone: '', jobRole: '', note: '' });
+  const [form, setForm] = useState(() => ({
+    receiverName: prefill?.receiverName || '',
+    receiverPhone: prefill?.receiverPhone || '',
+    jobRole: prefill?.jobRole || '',
+    note: prefill?.note || '',
+  }));
   const [showSheet, setShowSheet] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +51,13 @@ export default function MakeCall() {
   const deviceRef = useRef(null);
   const activeCallRef = useRef(null);
   const timerRef = useRef(null);
+  const callIdRef = useRef(null);
+
+  // Campaign-call context — only populated when this screen was reached via
+  // a candidate's "Call Now" button. Drives the two-column live notes panel.
+  const [campaignCandidate, setCampaignCandidate] = useState(null);
+  const [campaignTagOptions, setCampaignTagOptions] = useState([]);
+  const [savingCampaign, setSavingCampaign] = useState(false);
 
   useEffect(() => {
     api.listWorkProfiles().then((d) => setProfiles(d.profiles || [])).catch(() => {});
@@ -42,6 +71,17 @@ export default function MakeCall() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!campaignId || !candidateId) return;
+    api.getCampaign(campaignId).then((d) => {
+      setCampaignTagOptions(d.campaign?.tags || []);
+      for (const batch of d.batches || []) {
+        const found = batch.candidates.find((c) => c.id === candidateId);
+        if (found) { setCampaignCandidate(found); break; }
+      }
+    }).catch(() => {});
+  }, [campaignId, candidateId]);
 
   const activeProfile = profiles.find((p) => p.is_active) || profiles[0];
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -70,12 +110,58 @@ export default function MakeCall() {
     stopTimer();
     activeCallRef.current = null;
     setCallPhase('ended');
-    navigate('/success', {
+    // Campaign calls stay on this screen after hangup — the live notes
+    // panel remains open so the recruiter can tag/note/pick an outcome
+    // before "Save and Next" advances the queue. Ad-hoc calls behave as
+    // before and drop straight to the success screen.
+    if (campaignId && candidateId) return;
+    // Ad-hoc (non-campaign) call — Part 3 of the "restore Make a Call"
+    // spec: land on the Call Outcome screen so the employer can select the
+    // result before moving on, rather than a plain "call ended" success page.
+    navigate('/employer/call-outcome', {
       state: {
-        message: `Your ClearCall Verified Call with ${form.receiverName} has ended.`,
-        continueTo: '/employer/dashboard',
+        callId: callIdRef.current,
+        receiverName: form.receiverName,
+        jobRole: form.jobRole,
+        note: form.note,
+        callType: 'clearcall',
       },
     });
+  }
+
+  async function handleSaveAndNext({ tags, notes, outcome, callbackAt }) {
+    if (!campaignId || !candidateId) return;
+    setSavingCampaign(true);
+    setError('');
+    try {
+      await api.updateCampaignCandidate(campaignId, candidateId, {
+        tags,
+        notes,
+        outcome,
+        callStatus: outcomeToCallStatus(outcome),
+        durationSeconds: seconds,
+        callId: callIdRef.current,
+        callbackAt: callbackAt || null,
+      });
+
+      const d = await api.getCampaign(campaignId);
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const callableBatch = (d.batches || []).find((b) => b.call_date <= todayIso);
+      const nextId = callableBatch?.candidates.find((c) => c.call_status === 'not_called')?.id;
+
+      if (nextId) {
+        navigate(`/employer/campaigns/${campaignId}`);
+      } else {
+        // This was the last candidate in today's queue — show the
+        // end-of-day summary instead of the plain candidate list.
+        navigate(`/employer/campaigns/${campaignId}/summary`, {
+          state: { batchId: callableBatch?.id },
+        });
+      }
+    } catch (err) {
+      setError(err.message);
+      setSavingCampaign(false);
+    }
   }
 
   const handleCallType = async (type) => {
@@ -85,14 +171,27 @@ export default function MakeCall() {
     if (type !== 'clearcall') {
       setSubmitting(true);
       try {
-        await api.initiateCall({
+        const { call } = await api.initiateCall({
           receiverPhone: form.receiverPhone,
           receiverName: form.receiverName,
           jobRole: form.jobRole,
           callType: type,
           note: form.note,
         });
-        navigate('/call/post-nudge', { state: { receiverName: form.receiverName, jobRole: form.jobRole } });
+        // Normal calls place no live in-browser audio connection, so the
+        // outcome screen appears immediately — then, since this was a
+        // Normal (unverified) Call, the existing "try ClearCall Verified
+        // next time" nudge still follows afterwards.
+        navigate('/employer/call-outcome', {
+          state: {
+            callId: call.id,
+            receiverName: form.receiverName,
+            jobRole: form.jobRole,
+            note: form.note,
+            callType: 'normal',
+            nudgeAfter: true,
+          },
+        });
       } catch (err) {
         setError(err.message);
       } finally {
@@ -115,6 +214,7 @@ export default function MakeCall() {
         note: form.note,
       });
 
+      callIdRef.current = call.id;
       const { token } = await api.getVoiceToken();
 
       if (!deviceRef.current) {
@@ -169,6 +269,22 @@ export default function MakeCall() {
     }
   };
 
+  if (callPhase && campaignId && candidateId && campaignCandidate) {
+    return (
+      <CampaignCallPanel
+        candidate={campaignCandidate}
+        tagOptions={campaignTagOptions}
+        seconds={seconds}
+        callPhase={callPhase}
+        muted={muted}
+        onToggleMute={toggleMute}
+        onHangUp={hangUp}
+        onSaveAndNext={handleSaveAndNext}
+        saving={savingCampaign}
+      />
+    );
+  }
+
   if (callPhase) {
     return (
       <div className="fullscreen-fixed" style={{ background: 'var(--navy)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
@@ -211,8 +327,13 @@ export default function MakeCall() {
   return (
     <>
       <StatusBar />
-      <div className="screen">
+      <div className="screen" style={{ paddingBottom: 90 }}>
         <TopHeader title="Make a Call" />
+
+        <div className="pill-tabs" style={{ marginBottom: 16 }}>
+          <button className="pill-tab active">New Call</button>
+          <button className="pill-tab" onClick={() => navigate('/employer/calls')}>Call History</button>
+        </div>
 
         <div className="card mb-24">
           <div className="row-between">
@@ -254,6 +375,7 @@ export default function MakeCall() {
           </button>
         </div>
       </div>
+      <EmployerBottomNav active="calls" />
 
       {showSheet && <CallTypeSheet onSelect={handleCallType} onClose={() => setShowSheet(false)} />}
     </>

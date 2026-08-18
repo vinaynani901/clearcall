@@ -1,0 +1,65 @@
+{
+  "name": "ClearCall",
+  "short_name": "ClearCall",
+  "description": "Know who is calling before you answer — verified employer calls, campaign management, and job search in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1e3a8a",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "/employer-icon.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/jobseeker-icon.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/admin-icon.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ClearCall Employer",
+      "short_name": "Employer",
+      "url": "/quick-login/employer",
+      "icons": [
+        {
+          "src": "/employer-icon.ico",
+          "sizes": "256x256",
+          "type": "image/x-icon"
+        }
+      ]
+    },
+    {
+      "name": "ClearCall Job Seeker",
+      "short_name": "Seeker",
+      "url": "/quick-login/jobseeker",
+      "icons": [
+        {
+          "src": "/jobseeker-icon.ico",
+          "sizes": "256x256",
+          "type": "image/x-icon"
+        }
+      ]
+    },
+    {
+      "name": "ClearCall Admin",
+      "short_name": "Admin",
+      "url": "/quick-login/admin",
+      "icons": [
+        {
+          "src": "/admin-icon.ico",
+          "sizes": "256x256",
+          "type": "image/x-icon"
+        }
+      ]
+    }
+  ]
+}
