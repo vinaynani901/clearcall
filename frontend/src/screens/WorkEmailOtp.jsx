@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { StatusBar, ErrorBanner } from '../components/Shared';
 import AuthShell from '../components/AuthShell';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+// Shared OTP verification screen for both the employer work-email flow and
+// the job seeker signup flow. `location.state.purpose` selects which OTP
+// bucket the backend checks against ('work_email_verify' — default — or
+// 'jobseeker_email_verify'); `location.state.continueTo` selects where the
+// success screen sends the user afterwards. Employer signup already relies
+// on the defaults below (no state passed), so that flow is unchanged.
 export default function WorkEmailOtp() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { user, refresh } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -15,11 +22,14 @@ export default function WorkEmailOtp() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const email = user?.email;
+  const purpose = state?.purpose || 'work_email_verify';
+  const continueTo = state?.continueTo || '/employer/dashboard';
+  const isJobseeker = purpose === 'jobseeker_email_verify';
 
   const sendCode = async () => {
     setError('');
     try {
-      await api.sendOtp(email);
+      await api.sendOtp(email, purpose);
       setSent(true);
       setResendCooldown(30);
     } catch (err) {
@@ -40,9 +50,16 @@ export default function WorkEmailOtp() {
     setError('');
     setLoading(true);
     try {
-      await api.verifyOtp(email, code);
+      await api.verifyOtp(email, code, purpose);
       await refresh();
-      navigate('/success', { state: { message: 'Your work email is verified. Your ClearCall account is now active.', continueTo: '/employer/dashboard' } });
+      navigate('/success', {
+        state: {
+          message: isJobseeker
+            ? 'Your email is verified. Your ClearCall account is now active.'
+            : 'Your work email is verified. Your ClearCall account is now active.',
+          continueTo,
+        },
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,7 +72,7 @@ export default function WorkEmailOtp() {
       <StatusBar />
       <div className="screen screen-centered" style={{ flex: 1 }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>📧</div>
-        <div style={{ fontWeight: 800, fontSize: 19, marginBottom: 6 }}>Verify Your Work Email</div>
+        <div style={{ fontWeight: 800, fontSize: 19, marginBottom: 6 }}>{isJobseeker ? 'Verify Your Email' : 'Verify Your Work Email'}</div>
         <div className="muted small" style={{ marginBottom: 24 }}>
           {sent ? 'We sent a 6-digit code to' : 'Sending a code to'} <strong>{email}</strong>
         </div>
@@ -90,7 +107,9 @@ export default function WorkEmailOtp() {
         </button>
 
         <div className="muted xs" style={{ marginTop: 20, maxWidth: 300 }}>
-          The code expires in 10 minutes. This verifies you are employed at this company.
+          {isJobseeker
+            ? 'The code expires in 10 minutes. This confirms this email address belongs to you.'
+            : 'The code expires in 10 minutes. This verifies you are employed at this company.'}
         </div>
       </div>
     </AuthShell>

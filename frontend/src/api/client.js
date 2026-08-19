@@ -63,8 +63,8 @@ export const api = {
   changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
   deleteAccount: (password) => request('/auth/delete-account', { method: 'POST', body: { password } }),
   me: () => request('/auth/me'),
-  sendOtp: (email) => request('/auth/send-otp', { method: 'POST', body: { email }, auth: false }),
-  verifyOtp: (email, code) => request('/auth/verify-otp', { method: 'POST', body: { email, code }, auth: false }),
+  sendOtp: (email, purpose) => request('/auth/send-otp', { method: 'POST', body: { email, purpose }, auth: false }),
+  verifyOtp: (email, code, purpose) => request('/auth/verify-otp', { method: 'POST', body: { email, code, purpose }, auth: false }),
 
   // abn
   verifyAbn: (payload) => request('/abn/verify', { method: 'POST', body: payload }),

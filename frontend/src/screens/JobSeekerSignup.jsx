@@ -36,7 +36,7 @@ export default function JobSeekerSignup() {
         lookingForWork: form.lookingForWork,
       });
       await loginWithToken(data.token, data.user, null);
-      navigate('/jobseeker/home');
+      navigate('/verify/otp', { state: { purpose: 'jobseeker_email_verify', continueTo: '/jobseeker/home' } });
     } catch (err) {
       setError(err.message);
     } finally {

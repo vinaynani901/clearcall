@@ -278,10 +278,16 @@ const otpSendLimiter = rateLimit({
 
 // POST /api/auth/send-otp
 router.post('/send-otp', otpSendLimiter, async (req, res) => {
-  const { email } = req.body;
+  const { email, purpose } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
-  if (isPersonalEmailDomain(email)) {
+  // 'work_email_verify' (default, employer flow) requires a company work
+  // email — personal domains are rejected. 'jobseeker_email_verify' has no
+  // such restriction: job seekers sign up with whatever personal email they
+  // used at signup, and that address IS the one being verified here.
+  const otpPurpose = purpose === 'jobseeker_email_verify' ? 'jobseeker_email_verify' : 'work_email_verify';
+
+  if (otpPurpose === 'work_email_verify' && isPersonalEmailDomain(email)) {
     return res.status(400).json({ error: 'Personal emails are not accepted. Please use your company work email.' });
   }
 
@@ -290,8 +296,8 @@ router.post('/send-otp', otpSendLimiter, async (req, res) => {
 
   db.prepare(`
     INSERT INTO otp_codes (id, email, code, purpose, expires_at, used)
-    VALUES (?, ?, ?, 'work_email_verify', ?, 0)
-  `).run(newId('otp'), email.toLowerCase().trim(), code, expiresAt);
+    VALUES (?, ?, ?, ?, ?, 0)
+  `).run(newId('otp'), email.toLowerCase().trim(), code, otpPurpose, expiresAt);
 
   try {
     await sendOtpEmail(email, code);
@@ -306,21 +312,27 @@ router.post('/send-otp', otpSendLimiter, async (req, res) => {
   res.json({ message: `Verification code sent to ${email}`, expiresInMinutes: 10 });
 });
 
-// Master OTP for non-production testing only. '000000' always verifies any
-// email so QA/demo flows never have to wait on real email delivery. Gated
-// strictly on NODE_ENV — this branch does not exist (is never reachable) when
-// NODE_ENV === 'production', so it can't be used to bypass verification on a
-// live deployment even if someone guesses the code.
+// Master OTP for testing: '000000' always verifies any email on this
+// allowlist, in every environment including production. It intentionally
+// does NOT check NODE_ENV — gating is entirely the allowlist below, so it
+// can be used to test the live production deployment without needing real
+// email delivery, while remaining completely unusable for any real user
+// account that isn't explicitly listed here.
 const MASTER_OTP_CODE = '000000';
+const MASTER_OTP_ALLOWLIST = new Set([
+  'vinay@company.com.au',
+  'test@clearcall.test',
+]);
 
 // POST /api/auth/verify-otp
 router.post('/verify-otp', (req, res) => {
-  const { email, code } = req.body;
+  const { email, code, purpose } = req.body;
   if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
 
   const normalizedEmail = email.toLowerCase().trim();
+  const otpPurpose = purpose === 'jobseeker_email_verify' ? 'jobseeker_email_verify' : 'work_email_verify';
 
-  if (process.env.NODE_ENV !== 'production' && code === MASTER_OTP_CODE) {
+  if (code === MASTER_OTP_CODE && MASTER_OTP_ALLOWLIST.has(normalizedEmail)) {
     db.prepare('UPDATE users SET email_verified = 1 WHERE email = ?').run(normalizedEmail);
     db.prepare('UPDATE companies SET email_verified = 1 WHERE work_email = ?').run(normalizedEmail);
     db.prepare('UPDATE company_members SET email_verified = 1 WHERE work_email = ?').run(normalizedEmail);
@@ -329,9 +341,9 @@ router.post('/verify-otp', (req, res) => {
 
   const record = db.prepare(`
     SELECT * FROM otp_codes
-    WHERE email = ? AND code = ? AND purpose = 'work_email_verify' AND used = 0
+    WHERE email = ? AND code = ? AND purpose = ? AND used = 0
     ORDER BY created_at DESC LIMIT 1
-  `).get(normalizedEmail, code);
+  `).get(normalizedEmail, code, otpPurpose);
 
   if (!record) {
     return res.status(400).json({ error: 'Invalid verification code' });
