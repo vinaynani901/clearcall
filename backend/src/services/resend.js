@@ -31,10 +31,17 @@ function otpEmailHtml(code) {
   </div>`;
 }
 
+function logTestOtp(toEmail, code) {
+  console.log('============================');
+  console.log(`TEST OTP FOR ${toEmail}`);
+  console.log(`CODE: ${code}`);
+  console.log('============================');
+}
+
 async function sendOtpEmail(toEmail, code) {
   const client = getClient();
   if (!client) {
-    console.log(`[DEV MODE - no RESEND_API_KEY set] OTP for ${toEmail}: ${code}`);
+    logTestOtp(toEmail, code);
     return { devMode: true, code };
   }
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'ClearCall <onboarding@resend.dev>';
@@ -365,5 +372,5 @@ module.exports = {
   sendOtpEmail, sendAdminMessageEmail, sendCallbackReminderEmail, sendJobseekerWelcomeEmail,
   sendPlanUpgradeConfirmationEmail, sendPilotWelcomeEmail, sendPilotEndingReminderEmail,
   sendPilotEndedEmail, sendUsageWarningEmail, sendUsageLimitReachedEmail,
-  sendRecruiterInviteEmail,
+  sendRecruiterInviteEmail, logTestOtp,
 };

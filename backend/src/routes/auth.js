@@ -6,7 +6,7 @@ const db = require('../db');
 const { newId } = require('../utils/ids');
 const { isPersonalEmailDomain } = require('../utils/emailDomains');
 const authMiddleware = require('../middleware/auth');
-const { sendOtpEmail, sendJobseekerWelcomeEmail } = require('../services/resend');
+const { sendOtpEmail, sendJobseekerWelcomeEmail, logTestOtp } = require('../services/resend');
 
 const router = express.Router();
 
@@ -300,22 +300,38 @@ router.post('/send-otp', otpSendLimiter, async (req, res) => {
     // Common cause during local testing: Resend's sandbox sender can only
     // deliver to the account owner's own email until a domain is verified.
     // Print the code here too so testing can still proceed.
-    console.log(`[EMAIL SEND FAILED - fallback] OTP for ${email}: ${code}`);
+    logTestOtp(email, code);
   }
 
   res.json({ message: `Verification code sent to ${email}`, expiresInMinutes: 10 });
 });
+
+// Master OTP for non-production testing only. '000000' always verifies any
+// email so QA/demo flows never have to wait on real email delivery. Gated
+// strictly on NODE_ENV — this branch does not exist (is never reachable) when
+// NODE_ENV === 'production', so it can't be used to bypass verification on a
+// live deployment even if someone guesses the code.
+const MASTER_OTP_CODE = '000000';
 
 // POST /api/auth/verify-otp
 router.post('/verify-otp', (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
 
+  const normalizedEmail = email.toLowerCase().trim();
+
+  if (process.env.NODE_ENV !== 'production' && code === MASTER_OTP_CODE) {
+    db.prepare('UPDATE users SET email_verified = 1 WHERE email = ?').run(normalizedEmail);
+    db.prepare('UPDATE companies SET email_verified = 1 WHERE work_email = ?').run(normalizedEmail);
+    db.prepare('UPDATE company_members SET email_verified = 1 WHERE work_email = ?').run(normalizedEmail);
+    return res.json({ message: 'Work email verified successfully' });
+  }
+
   const record = db.prepare(`
     SELECT * FROM otp_codes
     WHERE email = ? AND code = ? AND purpose = 'work_email_verify' AND used = 0
     ORDER BY created_at DESC LIMIT 1
-  `).get(email.toLowerCase().trim(), code);
+  `).get(normalizedEmail, code);
 
   if (!record) {
     return res.status(400).json({ error: 'Invalid verification code' });
@@ -325,9 +341,9 @@ router.post('/verify-otp', (req, res) => {
   }
 
   db.prepare('UPDATE otp_codes SET used = 1 WHERE id = ?').run(record.id);
-  db.prepare('UPDATE users SET email_verified = 1 WHERE email = ?').run(email.toLowerCase().trim());
-  db.prepare('UPDATE companies SET email_verified = 1 WHERE work_email = ?').run(email.toLowerCase().trim());
-  db.prepare('UPDATE company_members SET email_verified = 1 WHERE work_email = ?').run(email.toLowerCase().trim());
+  db.prepare('UPDATE users SET email_verified = 1 WHERE email = ?').run(normalizedEmail);
+  db.prepare('UPDATE companies SET email_verified = 1 WHERE work_email = ?').run(normalizedEmail);
+  db.prepare('UPDATE company_members SET email_verified = 1 WHERE work_email = ?').run(normalizedEmail);
 
   res.json({ message: 'Work email verified successfully' });
 });
