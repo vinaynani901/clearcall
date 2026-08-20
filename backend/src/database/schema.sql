@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS access_keys (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+user_id INTEGER REFERENCES users(id),
+key_string TEXT UNIQUE,
+key_name TEXT,
+status TEXT DEFAULT active,
+applications_made INTEGER DEFAULT 0,
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
