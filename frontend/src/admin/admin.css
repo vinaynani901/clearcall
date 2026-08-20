@@ -516,69 +516,13 @@ body > * {
    silently defeats text-overflow: ellipsis and forces the whole card (and
 
 @media (max-width: 430px) {
-  .admin-login-card {
-    width: 92%;
-    max-width: 92%;
-    margin: 0 auto;
-    box-sizing: border-box;
-  }
-
   .admin-sidebar {
     display: none;
   }
 
-  .admin-mobile-menu {
-    display: block;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 100;
-    background: var(--a-navy);
-    color: #fff;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    box-shadow: var(--a-shadow);
-  }
-
-  .admin-sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 90;
-  }
-
-  .admin-sidebar.open {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 80%;
-    height: 100vh;
-    background: var(--a-dark-sidebar);
-    z-index: 1000;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-  }
-
-  .admin-panel-close {
-    display: block;
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 24px;
-    color: #fff;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-
   .admin-main {
-    margin-left: 0;
     width: 100%;
+    margin-left: 0;
   }
 
   .cc-stats-grid {
@@ -588,39 +532,17 @@ body > * {
 
   .cc-stat-card {
     width: 100%;
-  }
-
-  .cc-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .cc-title {
-    font-size: 20px;
-  }
-
-  .cc-subtitle {
-    margin-top: 0;
-  }
-
-  .cc-panel {
-    width: 100%;
     box-sizing: border-box;
   }
 
-  .cc-panel-header {
+  .admin-btn {
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
     gap: 8px;
-  }
-
-  .cc-link-btn {
-    margin-top: 0;
-  }
-
-  .cc-chart-container {
     width: 100%;
-    overflow-x: hidden;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px 16px;
+    white-space: nowrap;
   }
 }
