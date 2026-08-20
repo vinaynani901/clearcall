@@ -36,6 +36,7 @@ const { startPilotScheduler } = require('./services/pilotScheduler');
 const { startBillingScheduler } = require('./services/billingScheduler');
 const { startAutoApplyScheduler } = require('./services/autoApplyEngine');
 const { startAutoApplyDailyTasksScheduler } = require('./services/autoApplyDailyTasks');
+const { runAutoApply } = require('./services/autoApply');
 const autoApplyRoutes = require('./routes/autoApply');
 
 const app = express();
@@ -116,6 +117,13 @@ app.listen(PORT, () => {
   startBillingScheduler();
   startAutoApplyScheduler();
   startAutoApplyDailyTasksScheduler();
+  setInterval(async () => {
+    try {
+      await runAutoApply();
+    } catch(e) {
+      console.error('Auto apply error:', e.message);
+    }
+  }, 30 * 60 * 1000);
 });
 
 module.exports = app;
