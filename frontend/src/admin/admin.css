@@ -1,5 +1,16 @@
-/* ClearCall Super Admin Panel — completely separate stylesheet from the
-   main app's index.css. Desktop-only by design; no mobile breakpoints. */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+body > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+
 
 .admin-app {
   --a-navy: #1e3a8a;
@@ -417,7 +428,19 @@
   .admin-print-report { position: absolute; top: 0; left: 0; width: 100%; border: none; }
 }
 
-/* ---- Coming soon placeholder ---- */
+
+@media (max-width: 768px) {
+  .admin-login-card {
+    width: 90%;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0;
+    right: 0;
+    transform: none;
+    position: relative;
+  }
+}
 .admin-coming-soon { background: #fff; border-radius: var(--a-radius); box-shadow: var(--a-shadow); padding: 64px; text-align: center; }
 .admin-coming-soon .icon { font-size: 40px; margin-bottom: 16px; }
 .admin-coming-soon .title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
