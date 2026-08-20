@@ -598,3 +598,12 @@ body > * {
 .admin-field input { width: 100%; box-sizing: border-box; }
 .admin-btn { width: 100%; box-sizing: border-box; }
 }
+@media (max-width: 768px) {
+.admin-shell { display: block !important; }
+.admin-sidebar { display: none !important; width: 0 !important; overflow: hidden !important; }
+.admin-main { width: 100% !important; margin-left: 0 !important; padding: 8px !important; }
+.admin-shell-v2 { width: 100% !important; overflow-x: hidden !important; }
+.cc-stats-grid { display: grid !important; grid-template-columns: 1fr !important; }
+.cc-row { display: flex !important; flex-direction: column !important; }
+.cc-panel { width: 100% !important; box-sizing: border-box !important; }
+}
