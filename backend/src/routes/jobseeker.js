@@ -70,13 +70,17 @@ router.post('/resume', (req, res) => {
     }
 
     db.prepare(`
-      UPDATE users SET resume_filename = ?, resume_path = ?, resume_uploaded_at = datetime('now') WHERE id = ?
-    `).run(req.file.originalname, req.file.path, req.user.id);
+      UPDATE users SET full_name = ?, phone = ?, looking_for_work = ? WHERE id = ?
+    `).run(
+      fullName ? fullName.trim() : existing.full_name,
+      phone !== undefined ? phone.trim() : existing.phone,
+      lookingForWork !== undefined ? (lookingForWork ? 1 : 0) : existing.looking_for_work,
+      req.user.id
+    );
 
-    res.status(201).json({
-      resumeFilename: req.file.originalname,
-      resumeUploadedAt: new Date().toISOString(),
-    });
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    const { password_hash, resume_path, avatar_path, gmail_access_token, gmail_refresh_token, ...safe } = user;
+    res.json({ profile: safe });
   });
 });
 
@@ -499,7 +503,11 @@ router.get('/activity', (req, res) => {
   const pageSize = Math.min(Number(req.query.pageSize) || 20, 50);
   const type = req.query.type;
 
-  // --- Generate Access Key Route ---
+  const events = buildActivityFeed(req.user.id, pageSize);
+  res.json({ events });
+});
+
+// --- Generate Access Key Route ---
 router.post('/access-keys/generate', (req, res) => {
   const { key_name } = req.body;
   if (!key_name) return res.status(400).json({ error: 'key_name is required' });
