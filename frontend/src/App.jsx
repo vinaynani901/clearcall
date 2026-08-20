@@ -188,7 +188,7 @@ export default function App() {
   // AuthContext-driven logic below even runs.
   if (location.pathname.startsWith('/admin')) {
     return (
-      <Suspense fallback={<div style={{background:'#0d1526',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',color:'white'}}>Loading…</div>}>
+      <Suspense fallback={null}>
         <AdminApp />
       </Suspense>
     );
