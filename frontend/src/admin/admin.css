@@ -584,3 +584,17 @@ body > * {
     font-size: 24px;
   }
 }
+@media (max-width: 430px) {
+.admin-shell { flex-direction: column; }
+.admin-sidebar { display: none; }
+.admin-main { width: 100%; margin-left: 0; padding: 12px; }
+.cc-stats-grid { grid-template-columns: 1fr; gap: 12px; }
+.cc-stat-card { width: 100%; box-sizing: border-box; }
+.cc-row { flex-direction: column; }
+.cc-panel { width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+.cc-header { flex-direction: column; gap: 8px; }
+.admin-login-screen { padding: 16px; }
+.admin-login-card { width: 100%; max-width: 100%; box-sizing: border-box; padding: 24px 16px; }
+.admin-field input { width: 100%; box-sizing: border-box; }
+.admin-btn { width: 100%; box-sizing: border-box; }
+}
