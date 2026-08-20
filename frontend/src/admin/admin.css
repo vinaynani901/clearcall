@@ -61,19 +61,22 @@ body > * {
 
 /* ---- Login screen ---- */
 .admin-login-screen {
+  width: 100vw;
   min-height: 100vh;
-  width: 100%;
+  overflow-x: hidden;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, var(--a-navy) 0%, var(--a-navy-dark) 100%);
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
+
 .admin-login-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 40px;
-  width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 32px 24px;
 }
 .admin-login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
 .admin-login-title { font-size: 18px; font-weight: 800; color: var(--a-navy); }
