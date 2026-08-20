@@ -24,6 +24,7 @@ export default function AdminLayout({ active, children }) {
   const navigate = useNavigate();
   const { admin, logout } = useAdminAuth();
   const [badges, setBadges] = useState({ verification: 0, scamReportsPending: 0, scamReportsUrgent: 0, supportTickets: 0 });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     adminApi.getVerificationQueueCount().then((d) => setBadges((b) => ({ ...b, verification: d.count }))).catch(() => {});
@@ -39,8 +40,10 @@ export default function AdminLayout({ active, children }) {
   return (
     <div className="admin-shell-v2">
       <AdminTopBar />
+      <button className="admin-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
+      <div className={`admin-sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)}></div>
       <div className="admin-shell">
-        <aside className="admin-sidebar">
+        <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="admin-sidebar-logo">
             <span className="admin-sidebar-logo-mark"><ShieldCheck size={34} color="#3b82f6" /></span>
             <div>
@@ -61,7 +64,10 @@ export default function AdminLayout({ active, children }) {
                 <button
                   key={item.key}
                   className={`admin-sidebar-link ${active === item.key ? 'active' : ''}`}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => {
+                    navigate(item.path);
+                    setSidebarOpen(false);
+                  }}
                 >
                   <span className="admin-sidebar-link-icon">{item.icon}</span>
                   <span className="admin-sidebar-link-label">{item.label}</span>
