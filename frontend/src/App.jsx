@@ -68,6 +68,7 @@ import RecruiterActivate from './screens/RecruiterActivate';
 import JobPostings from './screens/JobPostings';
 import PostJobForm from './screens/PostJobForm';
 import JobPostingApplicants from './screens/JobPostingApplicants';
+import JobSeekerAccessKeys from './screens/JobSeekerAccessKeys';
 
 // SheetJS (xlsx) is a large library only employers uploading a candidate
 // list need — lazy-load this screen so it isn't in the main bundle every
@@ -242,6 +243,7 @@ export default function App() {
         <Route path="/jobseeker/activity" element={<Protected role="jobseeker"><JobSeekerActivity /></Protected>} />
         <Route path="/jobseeker/messages" element={<Protected role="jobseeker"><JobSeekerMessages /></Protected>} />
         <Route path="/jobseeker/profile" element={<Protected role="jobseeker"><JobSeekerProfile /></Protected>} />
+        <Route path="/jobseeker/access-keys" element={<Protected role="jobseeker"><JobSeekerAccessKeys /></Protected>} />
 
         <Route path="/employer/dashboard" element={<Protected role="employer"><EmployerLayout active="dashboard" wide><EmployerDashboard /></EmployerLayout></Protected>} />
         <Route path="/employer/calls" element={<Protected role="employer"><EmployerLayout active="calls" wide><CallHistory role="employer" /></EmployerLayout></Protected>} />
