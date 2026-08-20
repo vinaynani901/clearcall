@@ -76,6 +76,13 @@ export default function JobSeekerProfile() {
         </div>
       </div>
 
+      <div className="card" style={{ cursor: 'pointer' }} onClick={() => navigate('/jobseeker/access-keys')}>
+        <div className="row" style={{ gap: 8 }}>
+          <span className="bold small">My Access Keys</span>
+        </div>
+        <div className="muted xs" style={{ marginTop: 6 }}>Share keys with placement agents to apply on your behalf</div>
+      </div>
+
       <div className="card mb-16">
         <div className="row" style={{ gap: 8, marginBottom: 10 }}>
           <SettingsIcon size={18} color="#64748b" />
