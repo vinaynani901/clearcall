@@ -624,3 +624,12 @@ body > * {
 .cc-title { font-size: 16px !important; }
 .cc-updated { font-size: 11px !important; }
 }
+@media (max-width: 768px) {
+  .admin-hamburger { display: block !important; position: fixed !important; top: 12px !important; left: 12px !important; z-index: 1001 !important; }
+  .admin-sidebar { display: none !important; position: fixed !important; top: 0 !important; left: 0 !important; height: 100vh !important; z-index: 1000 !important; transition: transform 0.3s ease !important; }
+  .admin-sidebar.open { display: block !important; transform: translateX(0) !important; }
+  .admin-sidebar-overlay { display: none !important; }
+  .admin-sidebar-overlay.open { display: block !important; position: fixed !important; inset: 0 !important; background: rgba(0,0,0,0.6) !important; z-index: 999 !important; }
+  .admin-shell { display: flex !important; flex-direction: column !important; }
+  .admin-main { width: 100% !important; margin-left: 0 !important; }
+}
