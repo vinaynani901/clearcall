@@ -499,194 +499,38 @@ router.get('/activity', (req, res) => {
   const pageSize = Math.min(Number(req.query.pageSize) || 20, 50);
   const type = req.query.type;
 
-  let all = buildActivityFeed(req.user.id, 500);
-  if (type && type !== 'all') all = all.filter((e) => e.type === type);
+  // --- Generate Access Key Route ---
+router.post('/access-keys/generate', (req, res) => {
+  const { key_name } = req.body;
+  if (!key_name) return res.status(400).json({ error: 'key_name is required' });
 
-  const start = (page - 1) * pageSize;
-  const pageItems = all.slice(start, start + pageSize);
-  res.json({ activity: pageItems, hasMore: start + pageSize < all.length, total: all.length });
-});
+  const userPlan = req.user.plan || 'free';
+  const maxKeys = userPlan === 'free' ? 1 : 5;
 
-// Checks for genuinely new ClearCall Direct postings since this user's last
-// dashboard load and, if any exist and they haven't turned the setting off,
-// sends a push (web push + FCM, best-effort) — "New job matches found".
-// Always advances the checkpoint so the same postings aren't re-notified on
-// every subsequent load, and never throws (a notification failure must
-// never break the dashboard).
-async function checkNewJobMatches(userId) {
-  try {
-    const user = db.prepare('SELECT last_job_match_check_at, notif_new_matches FROM users WHERE id = ?').get(userId);
-    const since = user?.last_job_match_check_at;
-
-    const newJobs = since
-      ? db.prepare("SELECT id, title FROM jobs WHERE active = 1 AND posted_at > ?").all(since)
-      : []; // first-ever load: nothing to compare against yet, just set the checkpoint
-
-    db.prepare("UPDATE users SET last_job_match_check_at = datetime('now') WHERE id = ?").run(userId);
-
-    if (newJobs.length > 0 && user.notif_new_matches) {
-      const title = 'New Job Matches Found';
-      const body = newJobs.length === 1 ? newJobs[0].title : `${newJobs.length} new jobs posted on ClearCall`;
-      const data = { count: newJobs.length };
-      createNotification(userId, { type: 'new_job_match', title: 'New Job Match', message: body, link: '/jobseeker/jobs' });
-      sendPushToUser(userId, { title, body, url: '/jobseeker/jobs', tag: 'new-matches', data })
-        .catch((err) => console.error('[jobseeker dashboard] New-match web push failed:', err.message));
-      fcm.sendFcmToUser(userId, { title, body, data })
-        .catch((err) => console.error('[jobseeker dashboard] New-match FCM failed:', err.message));
-    }
-  } catch (err) {
-    console.error('[jobseeker dashboard] New job match check failed:', err.message);
+  const activeKeys = db.prepare('SELECT COUNT(*) as count FROM access_keys WHERE user_id = ? AND status = "active"').get(req.user.id).count;
+  if (activeKeys >= maxKeys) {
+    return res.status(403).json({ error: `You have reached your plan limit for access keys (${maxKeys} allowed)` });
   }
-}
 
-router.get('/dashboard', async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const week = weekAgoIso();
+  const keyString = `CC-2026-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Auto-sync Gmail every time the job seeker opens the app (i.e. loads
-    // the dashboard) if they've connected it — matches every other
-    // dashboard number in being computed fresh on load. A failed sync must
-    // never break the dashboard; it just reports 0 imported this load.
-    let gmailImportResult = { synced: false, imported: 0 };
-    try {
-      gmailImportResult = await syncGmailForUser(userId);
-    } catch (err) {
-      console.error('[jobseeker dashboard] Gmail sync failed:', err.message);
-      gmailImportResult = { synced: false, imported: 0, error: 'Gmail sync failed, please try again.' };
-    }
+  db.prepare('INSERT INTO access_keys (id, user_id, key_string, key_name) VALUES (?, ?, ?, ?)').run(newId('key'), req.user.id, keyString, key_name);
 
-    await checkNewJobMatches(userId);
-
-    const applications = db.prepare('SELECT * FROM job_applications WHERE user_id = ? ORDER BY date_applied DESC, created_at DESC').all(userId);
-    const applicationsThisWeek = applications.filter((a) => a.created_at >= week).length;
-
-    // "Calls Received" is specifically a trailing-7-day count (not all-time)
-    // — matches the dashboard spec, which measures recent call activity
-    // rather than lifetime volume.
-    const allCallsReceived = db.prepare("SELECT * FROM calls WHERE receiver_user_id = ? AND call_type = 'clearcall'").all(userId);
-    const callsReceived = allCallsReceived.filter((c) => c.created_at >= week);
-    const callsThisWeek = callsReceived.length;
-
-    const interviews = applications.filter((a) => a.status === 'interview');
-    const interviewsThisWeek = interviews.filter((a) => a.updated_at >= week).length;
-
-    const offers = applications.filter((a) => a.status === 'offer');
-    const offersThisWeek = offers.filter((a) => a.updated_at >= week).length;
-
-    // Auto Apply dashboard stat (Part 6) — how many of this job seeker's
-    // applications this calendar month were submitted by the engine.
-    const monthStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const autoAppliedThisMonth = applications.filter((a) => a.source === 'auto_apply' && a.created_at >= monthStartIso).length;
-
-    const upcomingInterviews = interviews
-      .filter((a) => a.interview_at && a.interview_at >= new Date().toISOString())
-      .sort((a, b) => a.interview_at.localeCompare(b.interview_at))
-      .slice(0, 5)
-      .map((a) => ({ id: a.id, companyName: a.company_name, jobTitle: a.job_title, interviewAt: a.interview_at }));
-
-    // Jobs for you: most recent active ClearCall Direct postings.
-    const jobsForYouRows = db.prepare(`
-      SELECT jobs.*, companies.name as company_name, companies.logo_url as company_logo_url, companies.abn_verified as company_abn_verified
-      FROM jobs LEFT JOIN companies ON companies.id = jobs.company_id
-      WHERE jobs.active = 1 ORDER BY jobs.posted_at DESC LIMIT 3
-    `).all();
-    let jobsForYou = jobsForYouRows.map((row) => ({
-      id: row.id, source: 'clearcall', verified: !!row.company_abn_verified, title: row.title,
-      companyName: row.company_name || 'ClearCall Employer', companyLogoUrl: row.company_logo_url,
-      location: row.location, employmentType: row.employment_type, salaryRange: row.salary_range,
-      skills: JSON.parse(row.skills || '[]'), postedAt: row.posted_at,
-    }));
-
-    // Fewer than 3 ClearCall Direct postings? Fill the remaining slots with
-    // real Adzuna results (once the API key is configured) rather than
-    // padding with fake ClearCall-branded cards. If Adzuna isn't configured
-    // the frontend shows a "More jobs coming soon" placeholder for the gap.
-    if (jobsForYou.length < 3 && adzuna.isConfigured()) {
-      const needed = 3 - jobsForYou.length;
-      try {
-        const { jobs: externalJobs } = await adzuna.searchJobs({ resultsPerPage: needed });
-        jobsForYou = jobsForYou.concat(externalJobs.slice(0, needed).map((j) => ({
-          id: j.id,
-          source: 'adzuna',
-          verified: false,
-          title: j.title,
-          companyName: j.companyName,
-          companyLogoUrl: null,
-          location: j.location,
-          employmentType: j.employmentType,
-          salaryRange: j.salaryMin || j.salaryMax ? `$${(j.salaryMin || 0).toLocaleString()} – $${(j.salaryMax || j.salaryMin || 0).toLocaleString()}` : null,
-          skills: [],
-          postedAt: j.postedAt,
-          applyUrl: j.applyUrl,
-        })));
-      } catch (err) {
-        console.error('[jobseeker dashboard] Adzuna fill failed:', err.message);
-      }
-    }
-
-    const hour = new Date().getHours();
-    const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
-    // Motivational subtitle — tiered by total application count, per spec.
-    let subtitle;
-    if (applications.length === 0) {
-      subtitle = "Let's get your job search started — your first application is just a few taps away.";
-    } else if (applications.length < 5) {
-      subtitle = 'Keep going, every application brings you closer.';
-    } else if (applications.length <= 20) {
-      subtitle = 'Great progress, opportunities are coming your way.';
-    } else {
-      subtitle = 'You are in the top tier of active job seekers.';
-    }
-
-    res.json({
-      greeting: { firstName: (req.user.full_name || '').split(' ')[0] || 'there', timeGreeting },
-      subtitle,
-      stats: {
-        totalApplications: { value: applications.length, thisWeek: applicationsThisWeek },
-        callsReceived: { value: callsReceived.length, thisWeek: callsThisWeek, allTime: allCallsReceived.length },
-        interviewsScheduled: { value: interviews.length, thisWeek: interviewsThisWeek },
-        offersReceived: { value: offers.length, thisWeek: offersThisWeek },
-        autoApplied: { value: autoAppliedThisMonth, thisMonth: autoAppliedThisMonth },
-      },
-      recentActivity: buildActivityFeed(userId, 8),
-      recentApplications: applications.slice(0, 4).map((a) => ({
-        id: a.id, companyName: a.company_name, jobTitle: a.job_title, status: a.status, dateApplied: a.date_applied,
-      })),
-      totalApplicationsCount: applications.length,
-      upcomingInterviews,
-      jobsForYou,
-      externalJobsConfigured: adzuna.isConfigured(),
-      gmailImport: gmailImportResult,
-    });
-  } catch (err) {
-    console.error('[jobseeker dashboard] Failed to build dashboard:', err);
-    res.status(500).json({ error: 'Could not load your dashboard right now.' });
-  }
+  res.json({ key_string: keyString });
 });
 
-// --- Notifications (bell dropdown) -----------------------------------------
-
-router.get('/notifications', (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 10, 50);
-  const notifications = db.prepare(`
-    SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?
-  `).all(req.user.id, limit);
-  const unreadCount = db.prepare('SELECT COUNT(*) as c FROM notifications WHERE user_id = ? AND read = 0').get(req.user.id).c;
-  res.json({ notifications, unreadCount });
+// --- List Access Keys Route ---
+router.get('/access-keys', (req, res) => {
+  const keys = db.prepare('SELECT id, key_name, status, applications_made, created_at FROM access_keys WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+  res.json({ keys });
 });
 
-router.put('/notifications/:id/read', (req, res) => {
-  const existing = db.prepare('SELECT id FROM notifications WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
-  if (!existing) return res.status(404).json({ error: 'Notification not found' });
-  db.prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(req.params.id);
-  res.json({ message: 'Marked as read' });
-});
-
-router.put('/notifications/read-all', (req, res) => {
-  db.prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0').run(req.user.id);
-  res.json({ message: 'All notifications marked as read' });
+// --- Revoke Access Key Route ---
+router.delete('/access-keys/:id', (req, res) => {
+  const key = db.prepare('SELECT id FROM access_keys WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  if (!key) return res.status(404).json({ error: 'Key not found' });
+  db.prepare('UPDATE access_keys SET status = ? WHERE id = ?').run('revoked', req.params.id);
+  res.json({ success: true });
 });
 
 module.exports = router;
