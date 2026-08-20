@@ -633,3 +633,10 @@ body > * {
   .admin-shell { display: flex !important; flex-direction: column !important; }
   .admin-main { width: 100% !important; margin-left: 0 !important; }
 }
+@media (max-width: 768px) {
+  .cc-stats-grid { grid-template-columns: 1fr !important; }
+  .cc-row, .cc-row-3 { flex-direction: column !important; }
+  .cc-panel { width: 100% !important; }
+  .cc-header { flex-direction: column !important; align-items: flex-start !important; }
+  body, .admin-main, .admin-shell { overflow-y: auto !important; }
+}
