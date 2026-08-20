@@ -516,27 +516,11 @@ body > * {
    silently defeats text-overflow: ellipsis and forces the whole card (and
 
 @media (max-width: 430px) {
-  .cc-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .cc-title {
-    font-size: 20px;
-  }
-
-  .cc-subtitle {
-    margin-top: 0;
-  }
-
-  .cc-stats-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .cc-stat-card {
-    width: 100%;
+  .admin-login-card {
+    width: 92%;
+    max-width: 92%;
+    margin: 0 auto;
+    box-sizing: border-box;
   }
 
   .admin-sidebar {
@@ -545,6 +529,27 @@ body > * {
 
   .admin-mobile-menu {
     display: block;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 100;
+    background: var(--a-navy);
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: var(--a-shadow);
+  }
+
+  .admin-sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 90;
   }
 
   .admin-sidebar.open {
@@ -559,15 +564,6 @@ body > * {
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
   }
 
-  .admin-sidebar-overlay {
-    display: block;
-  }
-
-  .admin-main {
-    margin-left: 0;
-    width: 100%;
-  }
-
   .admin-panel-close {
     display: block;
     position: absolute;
@@ -578,6 +574,34 @@ body > * {
     background: none;
     border: none;
     cursor: pointer;
+  }
+
+  .admin-main {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .cc-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .cc-stat-card {
+    width: 100%;
+  }
+
+  .cc-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cc-title {
+    font-size: 20px;
+  }
+
+  .cc-subtitle {
+    margin-top: 0;
   }
 
   .cc-panel {
