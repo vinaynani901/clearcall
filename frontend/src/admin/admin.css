@@ -502,3 +502,21 @@ body > * {
 .admin-hamburger {
   display: none;
 }
+@media (max-width: 768px) {
+  .admin-hamburger { display: block !important; position: fixed !important; top: 12px !important; left: 12px !important; z-index: 1001 !important; background: transparent !important; border: none !important; cursor: pointer !important; color: white !important; font-size: 28px !important; }
+  .admin-sidebar { display: none !important; position: fixed !important; top: 0 !important; left: 0 !important; height: 100vh !important; width: 75% !important; z-index: 1000 !important; transform: translateX(-100%) !important; transition: transform 0.3s ease !important; }
+  .admin-sidebar.open { display: flex !important; transform: translateX(0) !important; }
+  .admin-sidebar-overlay.open { display: block !important; position: fixed !important; inset: 0 !important; background: rgba(0,0,0,0.6) !important; z-index: 999 !important; }
+  .admin-shell { display: block !important; }
+  .admin-main { width: 100% !important; margin-left: 0 !important; padding: 60px 8px 8px !important; box-sizing: border-box !important; }
+}
+@media (max-width: 768px) {
+  .cc-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  .cc-header > * { position: static !important; }
+  .cc-updated { position: static !important; }
+  .cc-stats-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+  .cc-stat-card { padding: 12px 16px !important; min-height: unset !important; }
+  .cc-stat-spark { max-height: 40px !important; overflow: hidden !important; }
+  .cc-row, .cc-row-3 { flex-direction: column !important; }
+  .cc-panel { width: 100% !important; box-sizing: border-box !important; min-width: unset !important; }
+}
