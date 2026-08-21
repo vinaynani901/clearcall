@@ -11,16 +11,16 @@ export default function JobSeekerAccessKeys() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.getAccessKeys().then(d => setKeys(d.keys)).catch(() => {});
+    api.listAccessKeys().then(d => setKeys(d.accessKeys || d.keys || [])).catch(() => {});
   }, []);
 
   const generate = async () => {
     if (!keyName.trim()) return;
     setLoading(true);
     try {
-      const d = await api.generateAccessKey(keyName);
+      const d = await api.createAccessKey({ key_name: keyName });
       setNewKey(d.key_string);
-      api.getAccessKeys().then(d => setKeys(d.keys));
+      api.listAccessKeys().then(d => setKeys(d.keys));
     } catch(e) {
       alert(e.message || 'Could not generate key');
     } finally {
@@ -98,4 +98,4 @@ export default function JobSeekerAccessKeys() {
       </div>
     </JobSeekerLayout>
   );
-}test123
+}
