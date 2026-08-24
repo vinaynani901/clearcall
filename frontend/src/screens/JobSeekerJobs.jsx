@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import JobSeekerLayout from '../components/JobSeekerLayout';
 import { SearchIcon, BuildingIcon, BookmarkIcon } from '../components/Icons';
 import { ErrorBanner } from '../components/Shared';
+import { usePlan } from '../context/PlanContext';
+import FeatureLocked from '../components/FeatureLocked';
 import { api } from '../api/client';
 import { parseServerDate } from '../utils/date';
 
@@ -39,6 +41,8 @@ const SALARY_OPTIONS = [
 
 export default function JobSeekerJobs() {
   const { state } = useLocation();
+  const navigate = useNavigate();
+  const { isLocked, pricingPath } = usePlan();
   const [q, setQ] = useState('');
   const [location, setLocation] = useState('');
   const [jobType, setJobType] = useState('');
@@ -231,14 +235,6 @@ export default function JobSeekerJobs() {
                   <div className="muted xs" style={{ marginTop: 6 }}>Posted {timeAgo(job.postedAt)}</div>
                 </div>
               </div>
-              <button
-                className="btn btn-primary btn-sm"
-                style={{ width: 'auto', marginTop: 12 }}
-                disabled={applyingId === job.id || appliedIds.has(job.id)}
-                onClick={() => applyNow(job)}
-              >
-                {appliedIds.has(job.id) ? 'Applied ✓' : applyingId === job.id ? 'Applying…' : job.source === 'external' ? 'Apply Now (External)' : 'Apply Now'}
-              </button>
             </div>
           ))}
         </div>
@@ -246,17 +242,66 @@ export default function JobSeekerJobs() {
 
       {detailJob && (
         <div className="sheet-backdrop" onClick={() => setDetailJob(null)}>
-          <div className="sheet" style={{ borderRadius: 20, maxWidth: 480, margin: '0 auto' }} onClick={(e) => e.stopPropagation()}>
-            <div className="bold" style={{ fontSize: 17, marginBottom: 2 }}>{detailJob.title}</div>
-            <div className="muted small" style={{ marginBottom: 12 }}>{detailJob.companyName} · {detailJob.location}</div>
-            <div className="small" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+          <div className="sheet" style={{ borderRadius: 20, maxWidth: 480, margin: '0 auto', padding: 0 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ position: 'relative', padding: '20px 20px 0' }}>
+              <button
+                onClick={() => setDetailJob(null)}
+                style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'var(--grey-100)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1, color: 'var(--grey-500)' }}
+              >✕</button>
+              {detailJob.verified && <span className="badge badge-green" style={{ marginBottom: 8 }}>ClearCall Verified</span>}
+              <div className="bold" style={{ fontSize: 18, marginBottom: 2, paddingRight: 32 }}>{detailJob.title}</div>
+              <div className="muted small" style={{ marginBottom: 4 }}>{detailJob.companyName}</div>
+              <div className="muted xs" style={{ marginBottom: 4 }}>
+                {detailJob.location}{detailJob.employmentType ? ` · ${detailJob.employmentType}` : ''}
+              </div>
+              {salaryText(detailJob) && <div className="small bold" style={{ color: 'var(--green-dark)', marginBottom: 4 }}>{salaryText(detailJob)}</div>}
+              <div className="muted xs" style={{ marginBottom: 16 }}>Posted {timeAgo(detailJob.postedAt)}</div>
+            </div>
+            <div className="small" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, padding: '0 20px', maxHeight: 240, overflowY: 'auto', marginBottom: 16 }}>
               {detailJob.description || 'No further description available.'}
             </div>
-            <div className="row" style={{ gap: 10 }}>
-              <button className="btn btn-grey" onClick={() => setDetailJob(null)}>Close</button>
-              <button className="btn btn-primary" onClick={() => { applyNow(detailJob); setDetailJob(null); }}>
-                {detailJob.source === 'external' ? 'Apply Now (External)' : 'Apply Now'}
+            <div className="row" style={{ gap: 10, padding: '0 20px 20px' }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  if (detailJob.source === 'external') {
+                    window.open(detailJob.applyUrl, '_blank', 'noopener,noreferrer');
+                  }
+                  api.applyToExternalJob({
+                    externalId: detailJob.id,
+                    title: detailJob.title,
+                    companyName: detailJob.companyName,
+                    location: detailJob.location,
+                    salaryRange: salaryText(detailJob),
+                    applyUrl: detailJob.applyUrl,
+                  }).catch(() => {});
+                  setAppliedIds((s) => new Set([...s, detailJob.id]));
+                }}
+              >
+                {appliedIds.has(detailJob.id) ? 'Applied ✓' : 'Apply Now'}
               </button>
+              {isLocked('auto_apply') ? (
+                <button
+                  className="btn btn-grey"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.6 }}
+                  disabled
+                  onClick={() => navigate(pricingPath)}
+                >
+                  <span>🔒</span> Auto Apply
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, background: 'var(--green)', borderColor: 'var(--green)' }}
+                  onClick={() => {
+                    setDetailJob(null);
+                    navigate('/jobseeker/auto-apply');
+                  }}
+                >
+                  Auto Apply
+                </button>
+              )}
             </div>
           </div>
         </div>
