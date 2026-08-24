@@ -168,6 +168,7 @@ CREATE TABLE IF NOT EXISTS campaign_candidates (
   duration_seconds INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  delivery_preference TEXT,
   FOREIGN KEY (batch_id) REFERENCES campaign_batches(id),
   FOREIGN KEY (call_id) REFERENCES calls(id)
 );

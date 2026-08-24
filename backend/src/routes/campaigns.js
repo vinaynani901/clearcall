@@ -277,6 +277,103 @@ router.post('/', authMiddleware, (req, res) => {
   res.status(201).json({ campaign: { id: campaignId, name: name.trim(), tags: finalTags }, batches: batchSummaries });
 });
 
+// POST /api/campaigns/sms-reply — Twilio SMS webhook for delivery preference
+// replies. No authMiddleware — Twilio sends the webhook directly.
+router.post('/sms-reply', async (req, res) => {
+  const from = req.body.From || req.body.from || '';
+  const body = (req.body.Body || req.body.body || '').trim().toUpperCase();
+  const normalizedPhone = from.replace(/[^0-9]/g, '');
+
+  if (!from || !body) {
+    return res.status(400).send('<Response></Response>');
+  }
+
+  const validKeywords = ['DOOR', 'HOME', 'HOLD', 'SAFE', 'NEIGHBOUR'];
+  if (!validKeywords.includes(body)) {
+    return res.status(200).send(`<Response><Message>Reply with DOOR to leave at door, HOME if you will be home, or HOLD to reschedule.</Message></Response>`);
+  }
+
+  const candidate = db.prepare(`
+    SELECT cc.*, camp.name as campaign_name, camp.employer_user_id, camp.id as campaign_id
+    FROM campaign_candidates cc
+    JOIN campaign_batches cb ON cb.id = cc.batch_id
+    JOIN campaigns camp ON camp.id = cb.campaign_id
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(cc.phone, '+', ''), ' ', ''), '-', ''), '(', '') LIKE ?
+  `).get(`%${normalizedPhone}`);
+
+  if (!candidate) {
+    console.log(`[sms-reply] No candidate found for phone ${normalizedPhone}`);
+    return res.status(200).send('<Response></Response>');
+  }
+
+  db.prepare("UPDATE campaign_candidates SET delivery_preference = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(body, candidate.id);
+
+  // Send confirmation SMS
+  const twilioClient = require('../services/sms');
+  try {
+    await twilioClient.sendCandidateSms(from, 'Thanks, your driver has been notified.');
+  } catch (err) {
+    console.error('[sms-reply] Confirmation SMS failed:', err.message);
+  }
+
+  // Create notification for the campaign owner
+  try {
+    const { newId } = require('../utils/ids');
+    db.prepare(`
+      INSERT INTO notifications (id, user_id, type, title, message, link)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      newId('notif'),
+      candidate.employer_user_id,
+      'delivery_reply',
+      `Customer ${candidate.name} replied ${body}`,
+      `Customer ${candidate.name} replied ${body} for order ${candidate.campaign_name}.`,
+      `/employer/campaigns/${candidate.campaign_id}`
+    );
+  } catch (err) {
+    console.error('[sms-reply] Notification creation failed:', err.message);
+  }
+
+  res.status(200).send(`<Response><Message>Thanks, your driver has been notified.</Message></Response>`);
+});
+
+// POST /api/campaigns/:id/start-delivery-run — starts a delivery run by
+// sending an opening SMS to every candidate and updating campaign status.
+router.post('/:id/start-delivery-run', authMiddleware, (req, res) => {
+  const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND employer_user_id = ?').get(req.params.id, req.user.id);
+  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+  db.prepare("UPDATE campaigns SET campaign_type = 'active_delivery' WHERE id = ?").run(campaign.id);
+
+  const company = campaign.company_id
+    ? db.prepare('SELECT name FROM companies WHERE id = ?').get(campaign.company_id)
+    : null;
+  const companyName = company?.name || 'Your';
+
+  const batches = db.prepare('SELECT id FROM campaign_batches WHERE campaign_id = ?').all(campaign.id);
+  let sentCount = 0;
+  const errors = [];
+
+  for (const batch of batches) {
+    const candidates = db.prepare('SELECT * FROM campaign_candidates WHERE batch_id = ?').all(batch.id);
+    for (const candidate of candidates) {
+      const openingSms = `Hi ${candidate.name.split(' ')[0]}, your ${companyName} driver has started their delivery run today. Your delivery is scheduled. The driver will call you through our verified system before arrival. Reply DOOR to leave at door, HOME if you will be home, or HOLD to reschedule.`;
+      try {
+        const { sendCandidateSms } = require('../services/sms');
+        sendCandidateSms(candidate.phone, openingSms).catch((err) => {
+          errors.push({ candidateId: candidate.id, error: err.message });
+        });
+        sentCount++;
+      } catch (err) {
+        errors.push({ candidateId: candidate.id, error: err.message });
+      }
+    }
+  }
+
+  res.json({ success: true, smsSent: sentCount, errors: errors.length > 0 ? errors : undefined });
+});
+
 // GET /api/campaigns/callbacks/due — every scheduled callback across all of
 // this employer's campaigns, soonest first. Feeds the "Callbacks Due Today"
 // dashboard section.
