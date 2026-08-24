@@ -58,6 +58,7 @@ import MapCandidateColumns from './screens/MapCandidateColumns';
 import NameCampaign from './screens/NameCampaign';
 import { EmployerPricing, JobSeekerPricing } from './screens/Pricing';
 import UpgradeConfirm from './screens/UpgradeConfirm';
+import UpgradeSuccess from './screens/UpgradeSuccess';
 import AgencyPipeline from './screens/AgencyPipeline';
 import RecruiterDetail from './screens/RecruiterDetail';
 import ConnectedJobSeekerProfile from './screens/ConnectedJobSeekerProfile';
@@ -284,6 +285,7 @@ export default function App() {
         <Route path="/pricing" element={<Protected role="employer"><EmployerPricing /></Protected>} />
         <Route path="/pricing/jobseeker" element={<Protected role="jobseeker"><JobSeekerPricing /></Protected>} />
         <Route path="/upgrade/:plan" element={<Protected><UpgradeConfirm /></Protected>} />
+        <Route path="/upgrade/success" element={<Protected><UpgradeSuccess /></Protected>} />
 
         <Route path="/company/:id" element={<Protected><CompanyProfile /></Protected>} />
         <Route path="/report" element={<Protected><ReportCall /></Protected>} />
