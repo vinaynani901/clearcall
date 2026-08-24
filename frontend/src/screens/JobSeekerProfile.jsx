@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import JobSeekerLayout from '../components/JobSeekerLayout';
 import { DocumentIcon, ShieldCheck, HandshakeIcon, SettingsIcon } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
+import { usePlan } from '../context/PlanContext';
 import { api } from '../api/client';
 import { formatDate } from '../utils/date';
 
@@ -13,6 +14,7 @@ function initials(name) {
 export default function JobSeekerProfile() {
   const { user, avatarUrl } = useAuth();
   const navigate = useNavigate();
+  const { plan } = usePlan();
   const [profile, setProfile] = useState(null);
   const [agent, setAgent] = useState(null);
 
@@ -74,6 +76,34 @@ export default function JobSeekerProfile() {
           </div>
           <div className="muted xs" style={{ marginTop: 6 }}>All calls from verified employers only</div>
         </div>
+      </div>
+
+      <div className="card mb-16">
+        <div className="bold small mb-8">Subscription</div>
+        <div className="row-between small mb-8">
+          <span className="muted">Current Plan</span>
+          <span className="row" style={{ gap: 6 }}>
+            <span className="bold">{plan?.planLabel || 'Free'}</span>
+            <span className={`badge ${plan?.plan !== 'free' && plan?.plan ? 'badge-green' : 'badge-grey-light'} xs`}>
+              {plan?.plan !== 'free' && plan?.plan ? 'Active' : 'Free'}
+            </span>
+          </span>
+        </div>
+        {plan?.nextBillingDate && (
+          <div className="row-between small mb-8">
+            <span className="muted">Next Billing Date</span>
+            <span className="bold">{formatDate(plan.nextBillingDate)}</span>
+          </div>
+        )}
+        {(!plan?.plan || plan?.plan === 'free') ? (
+          <button className="btn btn-primary btn-sm" style={{ width: 'auto', marginTop: 8 }} onClick={() => navigate('/pricing/jobseeker')}>
+            Upgrade to Premium
+          </button>
+        ) : (
+          <button className="btn btn-outline btn-sm" style={{ width: 'auto', marginTop: 8 }} onClick={() => navigate('/settings')}>
+            Manage Subscription
+          </button>
+        )}
       </div>
 
       <div className="card" style={{ cursor: 'pointer' }} onClick={() => navigate('/jobseeker/access-keys')}>

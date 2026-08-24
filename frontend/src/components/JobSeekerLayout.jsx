@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { key: 'home', label: 'Dashboard', path: '/jobseeker/home', icon: HomeIcon },
   { key: 'applications', label: 'My Applications', path: '/jobseeker/applications', icon: DocumentIcon },
   { key: 'jobs', label: 'Job Search', path: '/jobseeker/jobs', icon: BriefcaseIcon },
+  { key: 'auto-apply', label: 'Auto Apply', path: '/jobseeker/auto-apply', icon: RocketIcon },
   { key: 'resume', label: 'Resume Builder', path: '/jobseeker/resume', icon: DocumentIcon, feature: 'resume_builder' },
   { key: 'agent', label: 'Placement Agent', path: '/jobseeker/agent', icon: HandshakeIcon },
   { key: 'calls', label: 'Call Protection', path: '/jobseeker/calls', icon: ShieldCheck },

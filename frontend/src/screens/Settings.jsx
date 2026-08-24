@@ -88,6 +88,11 @@ export default function Settings() {
             Upgrade Plan
           </button>
         )}
+        {!isFree && (
+          <button className="btn btn-outline" style={{ width: 'auto' }} onClick={() => navigate(pricingPath)}>
+            Manage Subscription
+          </button>
+        )}
       </div>
 
       <div className="card">

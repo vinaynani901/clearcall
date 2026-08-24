@@ -7,6 +7,28 @@ router.get('/config', (req, res) => {
   res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY, configured: isConfigured() });
 });
 
+// POST /api/payments/confirm — fallback for when webhook hasn't fired yet.
+// Marks the plan as active directly so the user sees Premium immediately.
+router.post('/confirm', (req, res) => {
+  const { planId, userId, userType } = req.body;
+  if (!planId || !userId || !userType) return res.status(400).json({ error: 'Missing planId, userId, or userType' });
+
+  const plan = PLANS[planId];
+  if (!plan) return res.status(400).json({ error: 'Invalid plan' });
+
+  const stripped = planId.replace('jobseeker_', '').replace('employer_', '');
+  try {
+    if (userType === 'jobseeker') {
+      db.prepare('UPDATE users SET plan = ? WHERE id = ?').run(stripped, userId);
+    } else {
+      db.prepare('UPDATE companies SET plan = ? WHERE id = ?').run(stripped, userId);
+    }
+    res.json({ success: true, plan: stripped });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post('/create-checkout', async (req, res) => {
   if (!isConfigured()) return res.status(503).json({ error: 'Payments not configured' });
 

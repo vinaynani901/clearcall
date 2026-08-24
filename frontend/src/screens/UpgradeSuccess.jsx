@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlan } from '../context/PlanContext';
+import { api } from '../api/client';
 
 export default function UpgradeSuccess() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { refresh } = usePlan();
   const [checking, setChecking] = useState(true);
@@ -14,10 +14,15 @@ export default function UpgradeSuccess() {
   const homePath = isJobSeeker ? '/jobseeker/home' : '/employer/dashboard';
 
   useEffect(() => {
-    // Refresh the plan to pick up the Stripe webhook update, then show
-    // the success state regardless — the webhook may still be in-flight
-    // but Stripe has confirmed the payment.
-    refresh().catch(() => {}).finally(() => setChecking(false));
+    // Call the fallback confirm endpoint to immediately activate the plan,
+    // then refresh from the server. If the webhook has already fired this
+    // is idempotent — the plan stays the same.
+    const planId = isJobSeeker ? 'jobseeker_premium' : 'employer_starter';
+    api.confirmPayment(planId, user.id, isJobSeeker ? 'jobseeker' : 'employer')
+      .catch(() => {})
+      .finally(() => {
+        refresh().catch(() => {}).finally(() => setChecking(false));
+      });
   }, []);
 
   return (
@@ -38,7 +43,7 @@ export default function UpgradeSuccess() {
         <div className="bold" style={{ fontSize: 16, color: '#10b981', marginBottom: 8 }}>Welcome to Premium</div>
         <p className="muted small" style={{ lineHeight: 1.6, marginBottom: 24 }}>
           {checking
-            ? 'Confirming your plan upgrade…'
+            ? 'Activating your plan…'
             : 'Your plan has been activated. You now have full access to all features included in your plan.'}
         </p>
 

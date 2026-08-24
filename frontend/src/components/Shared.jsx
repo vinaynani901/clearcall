@@ -24,6 +24,8 @@ export function JobSeekerBottomNav({ active }) {
   const navigate = useNavigate();
   const items = [
     { key: 'home', label: 'Home', icon: HomeIcon, path: '/jobseeker/home' },
+    { key: 'auto-apply', label: 'Auto Apply', icon: CallsIcon, path: '/jobseeker/auto-apply' },
+    { key: 'jobs', label: 'Jobs', icon: CallsIcon, path: '/jobseeker/jobs' },
     { key: 'calls', label: 'Calls', icon: CallsIcon, path: '/jobseeker/calls' },
     { key: 'profile', label: 'Profile', icon: ProfileIcon, path: '/jobseeker/profile' },
     { key: 'settings', label: 'Settings', icon: SettingsIcon, path: '/settings' },
