@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { stripe, PLANS, isConfigured } = require('../services/stripe');
+const { getStripe, PLANS, isConfigured } = require('../services/stripe');
 const db = require('../db');
 
 router.get('/config', (req, res) => {
@@ -15,7 +15,10 @@ router.post('/create-checkout', async (req, res) => {
     const plan = PLANS[planId];
     if (!plan) return res.status(400).json({ error: 'Invalid plan' });
 
-    const session = await stripe.checkout.sessions.create({
+    const s = getStripe();
+    if (!s) return res.status(503).json({ error: 'Payments not configured' });
+
+    const session = await s.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
       line_items: [{
@@ -42,8 +45,11 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   if (!isConfigured()) return res.status(503).json({ error: 'Not configured' });
 
   const sig = req.headers['stripe-signature'];
+  const s = getStripe();
+  if (!s) return res.status(503).json({ error: 'Not configured' });
+
   try {
-    const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    const event = s.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;

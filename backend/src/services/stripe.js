@@ -1,5 +1,4 @@
 const Stripe = require('stripe');
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const PLANS = {
   jobseeker_premium: { name: 'Career Seekers Premium', amount: 999, currency: 'aud', interval: 'month' },
@@ -13,4 +12,9 @@ function isConfigured() {
   return !!process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('your_stripe');
 }
 
-module.exports = { stripe, PLANS, isConfigured };
+function getStripe() {
+  if (!isConfigured()) return null;
+  return Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+module.exports = { getStripe, PLANS, isConfigured };
