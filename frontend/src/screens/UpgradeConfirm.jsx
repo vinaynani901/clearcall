@@ -44,7 +44,9 @@ export default function UpgradeConfirm() {
     setBusy(true);
     setError('');
     try {
-      const data = await api.createCheckout(planKey, user.id, isJobSeeker ? 'jobseeker' : 'employer');
+      // Prepend role prefix to match Stripe PLANS keys (e.g. "premium" -> "jobseeker_premium")
+      const fullPlanKey = (isJobSeeker ? 'jobseeker_' : 'employer_') + planKey;
+      const data = await api.createCheckout(fullPlanKey, user.id, isJobSeeker ? 'jobseeker' : 'employer');
       if (data.url) {
         window.location.href = data.url;
       } else {

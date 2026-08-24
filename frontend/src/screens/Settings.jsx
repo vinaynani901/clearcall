@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePlan } from '../context/PlanContext';
 import { api } from '../api/client';
 import { Modal } from '../components/Modal';
 
@@ -50,6 +51,7 @@ function DeleteAccountModal({ onClose, onDeleted }) {
 export default function Settings() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { plan } = usePlan();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleLogout = () => {
@@ -63,9 +65,31 @@ export default function Settings() {
     navigate('/login');
   };
 
+  const isJobSeeker = user?.role === 'jobseeker';
+  const planLabel = plan?.planLabel || (isJobSeeker ? 'Free' : 'Free');
+  const isFree = plan?.plan === 'free' || !plan?.plan;
+  const pricingPath = isJobSeeker ? '/pricing/jobseeker' : '/pricing';
+
   return (
     <div className="settings-page">
       <h1>Settings</h1>
+
+      <div className="card">
+        <h2>My Plan</h2>
+        <div className="field">
+          <label>Current Plan</label>
+          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+            <span className="bold" style={{ fontSize: 16 }}>{planLabel}</span>
+            {!isFree && <span className="badge badge-green">Active</span>}
+          </div>
+        </div>
+        {isFree && (
+          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => navigate(pricingPath)}>
+            Upgrade Plan
+          </button>
+        )}
+      </div>
+
       <div className="card">
         <h2>Account</h2>
         <div className="field">
