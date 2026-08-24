@@ -12,6 +12,49 @@ const FILTER_TABS = [
   { key: 'looking', label: 'Looking For Work' },
 ];
 
+const PLAN_BADGES = {
+  free: <AdminBadge tone="grey">Free</AdminBadge>,
+  premium: <AdminBadge tone="green">Premium</AdminBadge>,
+  premium_plus: <AdminBadge tone="orange">Premium Plus</AdminBadge>,
+};
+
+function ChangePlanModal({ target, onClose, onChanged }) {
+  const [plan, setPlan] = useState(target.plan || 'free');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await adminApi.changeJobseekerPlan(target.id, plan);
+      onChanged();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AdminModal title={`Change plan for ${target.full_name}`} onClose={onClose}>
+      <AdminErrorBanner message={error} />
+      <div className="admin-field">
+        <label>Plan</label>
+        <select value={plan} onChange={(e) => setPlan(e.target.value)}>
+          <option value="free">Free</option>
+          <option value="premium">Premium</option>
+          <option value="premium_plus">Premium Plus</option>
+        </select>
+      </div>
+      <div className="admin-row" style={{ gap: 10, justifyContent: 'flex-end' }}>
+        <button className="admin-btn admin-btn-outline" onClick={onClose} disabled={saving}>Cancel</button>
+        <button className="admin-btn admin-btn-primary" onClick={save} disabled={saving || plan === target.plan}>{saving ? 'Saving…' : 'Save Plan'}</button>
+      </div>
+    </AdminModal>
+  );
+}
+
 function MessageModal({ target, onClose, onSent }) {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -131,6 +174,7 @@ export default function JobSeekers() {
   const [messageTarget, setMessageTarget] = useState(null);
   const [callsTarget, setCallsTarget] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null);
+  const [changePlanTarget, setChangePlanTarget] = useState(null);
   const [error, setError] = useState('');
 
   const load = () => adminApi.listJobseekers().then((d) => setJobseekers(d.jobseekers)).catch((err) => setError(err.message));
@@ -156,6 +200,7 @@ export default function JobSeekers() {
   const menuFor = (u) => [
     { label: 'View Profile', onClick: () => setProfileTarget(u) },
     { label: 'View Call History', onClick: () => setCallsTarget(u) },
+    { label: 'Change Plan', onClick: () => setChangePlanTarget(u) },
     u.suspended
       ? { label: 'Unsuspend Account', onClick: () => runAction(() => adminApi.unsuspendJobseeker(u.id)) }
       : { label: 'Suspend Account', onClick: () => runAction(() => adminApi.suspendJobseeker(u.id)) },
@@ -166,6 +211,7 @@ export default function JobSeekers() {
   const columns = [
     { key: 'full_name', label: 'Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
+    { key: 'plan', label: 'Plan', sortable: true, render: (u) => PLAN_BADGES[u.plan] || <AdminBadge tone="grey">{u.plan || 'free'}</AdminBadge>, csv: (u) => u.plan || 'free' },
     { key: 'created_at', label: 'Date Joined', sortable: true, render: (u) => formatDate(u.created_at), csv: (u) => u.created_at },
     { key: 'suspended', label: 'Status', sortable: true, render: (u) => (u.suspended ? <AdminBadge tone="red">Suspended</AdminBadge> : <AdminBadge tone="green">Active</AdminBadge>), csv: (u) => (u.suspended ? 'Suspended' : 'Active') },
     { key: 'applicationsTracked', label: 'Applications Tracked', sortable: true },
@@ -199,6 +245,13 @@ export default function JobSeekers() {
       {profileTarget && <ProfilePanel user={profileTarget} onClose={() => setProfileTarget(null)} onViewCalls={(u) => { setProfileTarget(null); setCallsTarget(u); }} />}
       {callsTarget && <CallHistoryPanel user={callsTarget} onClose={() => setCallsTarget(null)} />}
       {messageTarget && <MessageModal target={messageTarget} onClose={() => setMessageTarget(null)} onSent={() => setMessageTarget(null)} />}
+      {changePlanTarget && (
+        <ChangePlanModal
+          target={changePlanTarget}
+          onClose={() => setChangePlanTarget(null)}
+          onChanged={() => { setChangePlanTarget(null); load(); }}
+        />
+      )}
       {confirmTarget && (
         <AdminConfirmDialog
           title="Delete this job seeker?"
