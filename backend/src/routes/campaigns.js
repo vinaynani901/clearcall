@@ -213,7 +213,7 @@ router.post('/', authMiddleware, (req, res) => {
     });
   }
 
-  const { name, tags, tagTemplateId, batches } = req.body;
+  const { name, tags, tagTemplateId, batches, campaignType, assignedTo, routeId } = req.body;
   if (!name || !Array.isArray(batches) || batches.length === 0) {
     return res.status(400).json({ error: 'A campaign name and at least one candidate list are required' });
   }
@@ -247,9 +247,9 @@ router.post('/', authMiddleware, (req, res) => {
   const campaignId = newId('campaign');
 
   db.prepare(`
-    INSERT INTO campaigns (id, employer_user_id, company_id, name, tag_template_id, tags)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(campaignId, req.user.id, company ? company.id : null, name.trim(), tagTemplateId || null, JSON.stringify(finalTags));
+    INSERT INTO campaigns (id, employer_user_id, company_id, name, tag_template_id, tags, campaign_type, assigned_to, route_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(campaignId, req.user.id, company ? company.id : null, name.trim(), tagTemplateId || null, JSON.stringify(finalTags), campaignType || 'recruitment', assignedTo || null, routeId || null);
 
   const insertBatch = db.prepare('INSERT INTO campaign_batches (id, campaign_id, call_date) VALUES (?, ?, ?)');
   const insertCandidate = db.prepare(`

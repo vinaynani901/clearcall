@@ -158,6 +158,7 @@ export default function NewCampaign() {
   const selectedTagSetName = location.state?.tagSetName || null;
 
   const [name, setName] = useState('');
+  const [campaignType, setCampaignType] = useState('recruitment');
   const [slots, setSlots] = useState(buildSlots);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -231,6 +232,7 @@ export default function NewCampaign() {
       const data = await api.createCampaign({
         name: name.trim(),
         batches,
+        campaignType,
         tags: selectedTags || undefined,
         tagTemplateId: selectedTagTemplateId || undefined,
       });
@@ -258,6 +260,30 @@ export default function NewCampaign() {
         <div className="field">
           <label>Campaign name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Software Developer — August" />
+        </div>
+
+        <div className="mb-16">
+          <label className="bold mb-8" style={{ display: 'block', fontSize: 13 }}>Campaign Type</label>
+          <div className="row" style={{ gap: 12 }}>
+            <div
+              className={`card ${campaignType === 'recruitment' ? 'card-selected' : ''}`}
+              style={{ flex: 1, cursor: 'pointer', padding: 16, textAlign: 'center', border: campaignType === 'recruitment' ? '2px solid var(--primary)' : '2px solid transparent' }}
+              onClick={() => setCampaignType('recruitment')}
+            >
+              <div style={{ fontSize: 32, marginBottom: 8 }}>💼</div>
+              <div className="bold" style={{ fontSize: 14 }}>Recruitment Campaign</div>
+              <div className="muted xs" style={{ marginTop: 4 }}>For calling job candidates</div>
+            </div>
+            <div
+              className={`card ${campaignType === 'delivery' ? 'card-selected' : ''}`}
+              style={{ flex: 1, cursor: 'pointer', padding: 16, textAlign: 'center', border: campaignType === 'delivery' ? '2px solid var(--primary)' : '2px solid transparent' }}
+              onClick={() => setCampaignType('delivery')}
+            >
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🚚</div>
+              <div className="bold" style={{ fontSize: 14 }}>Delivery Campaign</div>
+              <div className="muted xs" style={{ marginTop: 4 }}>For calling delivery customers</div>
+            </div>
+          </div>
         </div>
 
         <div className="card mb-16">

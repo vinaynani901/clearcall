@@ -129,6 +129,9 @@ CREATE TABLE IF NOT EXISTS campaigns (
   name TEXT NOT NULL,
   tag_template_id TEXT,
   tags TEXT NOT NULL DEFAULT '[]', -- JSON array of {label, emoji} snapshotted at campaign creation
+  campaign_type TEXT NOT NULL DEFAULT 'recruitment', -- 'recruitment' or 'delivery'
+  assigned_to INTEGER REFERENCES users(id),
+  route_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (employer_user_id) REFERENCES users(id),
   FOREIGN KEY (company_id) REFERENCES companies(id)
