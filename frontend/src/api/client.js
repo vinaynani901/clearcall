@@ -127,6 +127,7 @@ export const api = {
   removeCandidate: (campaignId, candidateId) =>
     request(`/campaigns/${campaignId}/candidates/${candidateId}`, { method: 'DELETE' }),
   getCallbacksDue: () => request('/campaigns/callbacks/due'),
+  getTeamSummary: () => request('/campaigns/team-summary'),
   sendCandidateSms: (campaignId, candidateId) => request(`/campaigns/${campaignId}/candidates/${candidateId}/sms`, { method: 'POST' }),
   startDeliveryRun: (campaignId) => request(`/campaigns/${campaignId}/start-delivery-run`, { method: 'POST' }),
   nextDeliverySms: (campaignId, candidateId) => request(`/campaigns/${campaignId}/next-delivery/${candidateId}`, { method: 'POST' }),

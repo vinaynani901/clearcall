@@ -112,6 +112,8 @@ export default function EmployerDashboard() {
   const [callbackTarget, setCallbackTarget] = useState(null);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [teamSummary, setTeamSummary] = useState([]);
+  const isCompanyOwner = company?.id && (company.role === 'owner' || null);
 
   const load = () => api.getEmployerDashboard()
     .then(setData)
@@ -119,7 +121,10 @@ export default function EmployerDashboard() {
     // shape we already have (the fully-populated EMPTY_DATA on first load).
     .catch((err) => console.error('[dashboard] failed to load, showing empty state:', err))
     .finally(() => setLoading(false));
-  useEffect(() => { load(); }, []);
+  const loadTeamSummary = () => api.getTeamSummary()
+    .then((d) => setTeamSummary(d.summary || []))
+    .catch(() => setTeamSummary([]));
+  useEffect(() => { load(); loadTeamSummary(); }, []);
 
   const { greeting, todaySummary, stats, activeCampaign, verification, tasks, recentCalls, insights, campaignsSummary, myTeam } = data;
 
@@ -524,10 +529,63 @@ export default function EmployerDashboard() {
               </button>
             </div>
           </div>
-        </div>
+                </div>
 
-        {/* Insights */}
-        <div className="mb-16" style={{ marginTop: 24 }}>
+                  {/* My Team Assignments — only visible to the company owner */}
+                  {isCompanyOwner && teamSummary.length > 0 && (
+                    <div className="mb-24" style={{ marginTop: 24 }}>
+                      <div className="bold" style={{ fontSize: 16, marginBottom: 12 }}>My Team Assignments</div>
+                      <div className="card" style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ borderBottom: '2px solid var(--grey-200)' }}>
+                              <th style={{ padding: '10px 8px', textAlign: 'left' }}>Campaign</th>
+                              <th style={{ padding: '10px 8px', textAlign: 'left' }}>Assigned To</th>
+                              <th style={{ padding: '10px 8px', textAlign: 'center' }}>Total</th>
+                              <th style={{ padding: '10px 8px', textAlign: 'center' }}>Called</th>
+                              <th style={{ padding: '10px 8px', textAlign: 'center' }}>Remaining</th>
+                              <th style={{ padding: '10px 8px', textAlign: 'center' }}>Answer Rate</th>
+                              <th style={{ padding: '10px 8px', textAlign: 'right' }}></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {teamSummary.map((row) => (
+                              <tr key={row.campaignId} style={{ borderBottom: '1px solid var(--grey-100)' }}>
+                                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.campaignName}</td>
+                                <td style={{ padding: '10px 8px' }}>
+                                  {row.assignedName !== 'Unassigned' ? (
+                                    <span className="badge badge-blue xs">{row.assignedName}</span>
+                                  ) : (
+                                    <span className="muted xs">Unassigned</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>{row.totalCandidates}</td>
+                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>{row.calledCount}</td>
+                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>{row.remainingCount}</td>
+                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                  <span style={{ color: row.answerRate >= 50 ? 'var(--green)' : 'var(--orange)', fontWeight: 700 }}>
+                                    {row.answerRate}%
+                                  </span>
+                                </td>
+                                <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                  <button
+                                    className="btn btn-outline btn-sm"
+                                    style={{ fontSize: 11, padding: '4px 10px', width: 'auto' }}
+                                    onClick={() => navigate(`/employer/campaigns/${row.campaignId}`)}
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Insights */}
+                  <div className="mb-16" style={{ marginTop: 24 }}>
           <div className="bold" style={{ fontSize: 16 }}>Insights for You</div>
         </div>
         <div className="dash-insights-row">

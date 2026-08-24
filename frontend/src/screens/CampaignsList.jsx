@@ -5,6 +5,7 @@ import ThreeDotMenu from '../components/ThreeDotMenu';
 import RenameCampaignModal from '../components/RenameCampaignModal';
 import FeatureLocked from '../components/FeatureLocked';
 import { usePlan } from '../context/PlanContext';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { formatDate } from '../utils/date';
 
@@ -14,6 +15,7 @@ function todayIso() {
 
 export default function CampaignsList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { loading: planLoading, isLocked } = usePlan();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,10 @@ export default function CampaignsList() {
                     <span className="badge badge-blue">{c.batchCount} list{c.batchCount === 1 ? '' : 's'}</span>
                   </div>
                   <div className="muted small">{c.candidateCount} candidate{c.candidateCount === 1 ? '' : 's'}</div>
-                  <div className="muted xs" style={{ marginTop: 4 }}>Created {formatDate(c.created_at)}</div>
+                  <div className="row" style={{ gap: 6, marginTop: 4 }}>
+                    <div className="muted xs">Created {formatDate(c.created_at)}</div>
+                    {!c.isOwner && c.assigned_to === user?.id && <span className="badge badge-green xs">Assigned to You</span>}
+                  </div>
                 </div>
                 <div style={{ position: 'absolute', top: 10, right: 10 }} onClick={(e) => e.stopPropagation()}>
                   <ThreeDotMenu options={cardMenu(c)} />

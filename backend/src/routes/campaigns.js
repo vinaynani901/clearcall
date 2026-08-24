@@ -479,9 +479,74 @@ router.get('/callbacks/due', authMiddleware, (req, res) => {
   res.json({ callbacks: rows.map((r) => ({ ...r, tags: JSON.parse(r.tags), extra_data: JSON.parse(r.extra_data) })) });
 });
 
-// GET /api/campaigns — employer's campaign list with basic counts
-router.get('/', authMiddleware, (req, res) => {
+// GET /api/campaigns/team-summary — returns campaign stats per team member
+// for the company owner. Only the company owner can access this.
+router.get('/team-summary', authMiddleware, (req, res) => {
+  const company = getEmployerCompany(req.user.id);
+  if (!company) return res.status(404).json({ error: 'No company profile found' });
+
+  const membership = db.prepare('SELECT member_role FROM company_members WHERE user_id = ? AND company_id = ?').get(req.user.id, company.id);
+  if (!membership || membership.member_role !== 'owner') {
+    return res.status(403).json({ error: 'Only the company owner can view the team summary' });
+  }
+
   const campaigns = db.prepare('SELECT * FROM campaigns WHERE employer_user_id = ? ORDER BY created_at DESC').all(req.user.id);
+
+  const summary = campaigns.map((camp) => {
+    const assignedUser = camp.assigned_to
+      ? db.prepare('SELECT id, full_name FROM users WHERE id = ?').get(camp.assigned_to)
+      : null;
+
+    const batches = db.prepare('SELECT id FROM campaign_batches WHERE campaign_id = ?').all(camp.id);
+    let totalCandidates = 0;
+    let calledCount = 0;
+    let answeredCount = 0;
+
+    for (const b of batches) {
+      const stats = db.prepare(`
+        SELECT COUNT(*) as total,
+               SUM(CASE WHEN call_status != 'not_called' THEN 1 ELSE 0 END) as called,
+               SUM(CASE WHEN call_status = 'answered' THEN 1 ELSE 0 END) as answered
+        FROM campaign_candidates WHERE batch_id = ?
+      `).get(b.id);
+      totalCandidates += stats.total;
+      calledCount += stats.called || 0;
+      answeredCount += stats.answered || 0;
+    }
+
+    const remaining = totalCandidates - calledCount;
+    const answerRate = calledCount > 0 ? Math.round((answeredCount / calledCount) * 100) : 0;
+
+    return {
+      campaignId: camp.id,
+      campaignName: camp.name,
+      assignedTo: camp.assigned_to,
+      assignedName: assignedUser?.full_name || 'Unassigned',
+      totalCandidates,
+      calledCount,
+      remainingCount: remaining,
+      answerRate,
+    };
+  });
+
+  res.json({ summary });
+});
+
+// GET /api/campaigns — employer's campaign list with basic counts.
+// If the user is a recruiter (not owner), only return campaigns assigned to them.
+router.get('/', authMiddleware, (req, res) => {
+  const company = getEmployerCompany(req.user.id);
+  if (!company) return res.status(404).json({ error: 'No company profile found' });
+
+  const membership = db.prepare('SELECT member_role FROM company_members WHERE user_id = ? AND company_id = ?').get(req.user.id, company.id);
+  const isOwner = membership && membership.member_role === 'owner';
+
+  let campaigns;
+  if (isOwner) {
+    campaigns = db.prepare('SELECT * FROM campaigns WHERE employer_user_id = ? ORDER BY created_at DESC').all(req.user.id);
+  } else {
+    campaigns = db.prepare('SELECT * FROM campaigns WHERE employer_user_id = ? AND assigned_to = ? ORDER BY created_at DESC').all(req.user.id, req.user.id);
+  }
 
   const withCounts = campaigns.map((camp) => {
     const batches = db.prepare('SELECT id, call_date FROM campaign_batches WHERE campaign_id = ?').all(camp.id);
@@ -489,7 +554,7 @@ router.get('/', authMiddleware, (req, res) => {
     for (const b of batches) {
       candidateCount += db.prepare('SELECT COUNT(*) as n FROM campaign_candidates WHERE batch_id = ?').get(b.id).n;
     }
-    return { ...camp, tags: JSON.parse(camp.tags), batchCount: batches.length, candidateCount };
+    return { ...camp, tags: JSON.parse(camp.tags), batchCount: batches.length, candidateCount, isOwner };
   });
 
   res.json({ campaigns: withCounts });
