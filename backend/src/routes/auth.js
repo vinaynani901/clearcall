@@ -78,7 +78,7 @@ router.post('/signup/jobseeker/google', (req, res) => {
 
 // POST /api/auth/signup/employer
 router.post('/signup/employer', (req, res) => {
-  const { companyName, abn, industry, contactName, workEmail, password, linkedinUrl } = req.body;
+  const { companyName, abn, industry, contactName, workEmail, password, linkedinUrl, companySector, companySize } = req.body;
 
   if (!companyName || !abn || !industry || !contactName || !workEmail || !password) {
     return res.status(400).json({ error: 'All fields are required: company name, ABN, industry, contact name, work email, password' });
@@ -104,8 +104,8 @@ router.post('/signup/employer', (req, res) => {
     VALUES (?, ?, ?, ?, NULL, 'employer', 0)
   `);
   const insertCompany = db.prepare(`
-    INSERT INTO companies (id, owner_user_id, name, abn, industry, contact_name, work_email, linkedin_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO companies (id, owner_user_id, name, abn, industry, contact_name, work_email, linkedin_url, company_sector, company_size)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const insertMember = db.prepare(`
     INSERT INTO company_members (id, company_id, user_id, work_email, email_verified)
@@ -118,7 +118,7 @@ router.post('/signup/employer', (req, res) => {
 
   const tx = db.transaction(() => {
     insertUser.run(userId, contactName.trim(), workEmail.toLowerCase().trim(), passwordHash);
-    insertCompany.run(companyId, userId, companyName.trim(), abn.replace(/\s/g, ''), industry, contactName.trim(), workEmail.toLowerCase().trim(), linkedinUrl || null);
+    insertCompany.run(companyId, userId, companyName.trim(), abn.replace(/\s/g, ''), industry, contactName.trim(), workEmail.toLowerCase().trim(), linkedinUrl || null, companySector || 'other', companySize || 'small');
     insertMember.run(newId('member'), companyId, userId, workEmail.toLowerCase().trim());
     insertSettings.run(userId);
   });

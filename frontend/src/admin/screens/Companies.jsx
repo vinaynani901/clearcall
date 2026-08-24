@@ -15,6 +15,29 @@ const FILTER_TABS = [
   { key: 'high-risk', label: 'High Risk' },
 ];
 
+const SECTOR_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'recruitment', label: 'Recruitment' },
+  { key: 'delivery', label: 'Delivery' },
+  { key: 'healthcare', label: 'Healthcare' },
+  { key: 'construction', label: 'Construction' },
+  { key: 'education', label: 'Education' },
+  { key: 'retail', label: 'Retail' },
+  { key: 'technology', label: 'Technology' },
+  { key: 'other', label: 'Other' },
+];
+
+const SECTOR_COLORS = {
+  recruitment: '#3b82f6',
+  delivery: '#f59e0b',
+  healthcare: '#ef4444',
+  construction: '#f97316',
+  education: '#8b5cf6',
+  retail: '#ec4899',
+  technology: '#10b981',
+  other: '#6b7280',
+};
+
 function MessageModal({ target, onClose, onSent }) {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -297,6 +320,7 @@ export default function Companies() {
   const [companies, setCompanies] = useState([]);
   const [pilots, setPilots] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [sectorFilter, setSectorFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [profileId, setProfileId] = useState(null);
   const [messageTarget, setMessageTarget] = useState(null);
@@ -317,6 +341,7 @@ export default function Companies() {
     else if (filter === 'verified') list = list.filter((c) => c.abn_verified);
     else if (filter === 'suspended') list = list.filter((c) => c.suspension_status);
     else if (filter === 'high-risk') list = list.filter((c) => c.report_count >= 3);
+    if (sectorFilter !== 'all') list = list.filter((c) => c.company_sector === sectorFilter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((c) => c.name.toLowerCase().includes(q) || c.abn.includes(q));
@@ -354,7 +379,17 @@ export default function Companies() {
   const columns = [
     { key: 'name', label: 'Company Name', sortable: true },
     { key: 'abn', label: 'ABN', sortable: true },
-    { key: 'industry', label: 'Industry', sortable: true, render: (c) => c.industry || '—' },
+    { key: 'industry', label: 'Industry', sortable: true, render: (c) => (
+    <span className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+      {c.industry || '—'}
+      {c.company_sector && (
+        <span style={{
+          display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+          color: '#fff', background: SECTOR_COLORS[c.company_sector] || '#6b7280',
+        }}>{c.company_sector}</span>
+      )}
+    </span>
+  ) },
     {
       key: 'plan', label: 'Plan', sortable: true,
       render: (c) => (
@@ -409,6 +444,22 @@ export default function Companies() {
               <span className="icon">🔎</span>
               <input placeholder="Search by name or ABN…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
+          </div>
+          <div className="admin-row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+            {SECTOR_FILTERS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setSectorFilter(s.key)}
+                style={{
+                  padding: '4px 14px', borderRadius: 999, border: '1.5px solid',
+                  borderColor: sectorFilter === s.key ? (SECTOR_COLORS[s.key] || '#3b82f6') : '#e2e8f0',
+                  background: sectorFilter === s.key ? `${SECTOR_COLORS[s.key] || '#3b82f6'}15` : 'transparent',
+                  color: sectorFilter === s.key ? (SECTOR_COLORS[s.key] || '#3b82f6') : '#64748b',
+                  fontWeight: sectorFilter === s.key ? 700 : 500,
+                  fontSize: 12.5, cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >{s.label}</button>
+            ))}
           </div>
 
           <AdminTable

@@ -85,6 +85,8 @@ function runAdminMigrations() {
   addCompanyColumn('rejection_reason', 'rejection_reason TEXT');
   addCompanyColumn('admin_reviewed_at', 'admin_reviewed_at TEXT');
   addCompanyColumn('suspended_at', 'suspended_at TEXT');
+  addCompanyColumn('company_sector', "company_sector TEXT DEFAULT 'other'");
+  addCompanyColumn('company_size', "company_size TEXT DEFAULT 'small'");
 
   // Grandfather in companies that existed (and were already ABN-verified)
   // before this admin approval gate was introduced, so nothing that was

@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS companies (
   suspension_status INTEGER NOT NULL DEFAULT 0,
   under_review INTEGER NOT NULL DEFAULT 0,
   report_count INTEGER NOT NULL DEFAULT 0,
+  company_sector TEXT DEFAULT 'other',
+  company_size TEXT DEFAULT 'small',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (owner_user_id) REFERENCES users(id)
 );

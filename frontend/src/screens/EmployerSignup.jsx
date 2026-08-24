@@ -26,7 +26,7 @@ export default function EmployerSignup() {
   const { loginWithToken, setCompany } = useAuth();
   const [form, setForm] = useState({
     companyName: '', abn: '', industry: '', contactName: '', workEmail: '',
-    password: '', confirm: '', linkedinUrl: '',
+    password: '', confirm: '', linkedinUrl: '', companySector: '', companySize: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +76,14 @@ export default function EmployerSignup() {
       setError('Passwords do not match');
       return;
     }
+    if (!form.companySector) {
+      setError('Select your company sector to continue.');
+      return;
+    }
+    if (!form.companySize) {
+      setError('Select your company size to continue.');
+      return;
+    }
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters');
       return;
@@ -90,6 +98,8 @@ export default function EmployerSignup() {
         workEmail: form.workEmail,
         password: form.password,
         linkedinUrl: linkedinConnected ? form.linkedinUrl || 'connected' : null,
+        companySector: form.companySector,
+        companySize: form.companySize,
       });
       await loginWithToken(data.token, data.user, data.company);
       setCompany(data.company);
@@ -138,6 +148,55 @@ export default function EmployerSignup() {
             <div className="field" style={{ marginTop: -10 }}><div className="error-text">{abnLookup.error}</div></div>
           )}
           <div className="hint-text" style={{ marginTop: -10, marginBottom: 10 }}>This looks up the real Australian Business Register and fills in your officially registered company name. It's re-confirmed once more right after you register.</div>
+
+          <div className="mb-16">
+            <label className="bold mb-8" style={{ display: 'block', fontSize: 13 }}>Company Sector</label>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { key: 'recruitment', icon: '💼', label: 'Recruitment Agency' },
+                { key: 'delivery', icon: '🚚', label: 'Delivery Company' },
+                { key: 'healthcare', icon: '🏥', label: 'Healthcare' },
+                { key: 'construction', icon: '⛑️', label: 'Construction' },
+                { key: 'education', icon: '🎓', label: 'Education' },
+                { key: 'retail', icon: '🛍️', label: 'Retail' },
+                { key: 'technology', icon: '💻', label: 'Technology' },
+                { key: 'other', icon: '🔲', label: 'Other' },
+              ].map((s) => (
+                <div
+                  key={s.key}
+                  className={`card ${form.companySector === s.key ? 'card-selected' : ''}`}
+                  style={{ flex: '1 0 calc(25% - 8px)', minWidth: 100, cursor: 'pointer', padding: 12, textAlign: 'center', border: form.companySector === s.key ? '2px solid var(--primary)' : '2px solid transparent' }}
+                  onClick={() => setForm((f) => ({ ...f, companySector: s.key }))}
+                >
+                  <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
+                  <div className="xs bold">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {!form.companySector && <div className="error-text" style={{ marginTop: 4 }}>Select your company sector to continue.</div>}
+          </div>
+
+          <div className="mb-16">
+            <label className="bold mb-8" style={{ display: 'block', fontSize: 13 }}>Company Size</label>
+            <div className="row" style={{ gap: 8 }}>
+              {[
+                { key: '1-10', label: '1 to 10 people' },
+                { key: '11-50', label: '11 to 50 people' },
+                { key: '51-200', label: '51 to 200 people' },
+                { key: '200+', label: '200+ people' },
+              ].map((s) => (
+                <div
+                  key={s.key}
+                  className={`card ${form.companySize === s.key ? 'card-selected' : ''}`}
+                  style={{ flex: 1, cursor: 'pointer', padding: '12px 8px', textAlign: 'center', border: form.companySize === s.key ? '2px solid var(--primary)' : '2px solid transparent' }}
+                  onClick={() => setForm((f) => ({ ...f, companySize: s.key }))}
+                >
+                  <div className="xs bold">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {!form.companySize && <div className="error-text" style={{ marginTop: 4 }}>Select your company size to continue.</div>}
+          </div>
 
           <div className="field">
             <label>Industry</label>
