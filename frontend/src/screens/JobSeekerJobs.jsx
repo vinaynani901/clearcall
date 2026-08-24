@@ -241,7 +241,11 @@ export default function JobSeekerJobs() {
       )}
 
       {detailJob && (
-        <div className="sheet-backdrop" onClick={() => setDetailJob(null)}>
+        <div
+          className="sheet-backdrop"
+          onClick={() => setDetailJob(null)}
+          style={{ position: 'fixed', inset: 0 }}
+        >
           <div className="sheet" style={{ borderRadius: 20, maxWidth: 480, margin: '0 auto', padding: 0 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ position: 'relative', padding: '20px 20px 0' }}>
               <button
@@ -249,8 +253,8 @@ export default function JobSeekerJobs() {
                 style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'var(--grey-100)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1, color: 'var(--grey-500)' }}
               >✕</button>
               {detailJob.verified && <span className="badge badge-green" style={{ marginBottom: 8 }}>ClearCall Verified</span>}
-              <div className="bold" style={{ fontSize: 18, marginBottom: 2, paddingRight: 32 }}>{detailJob.title}</div>
-              <div className="muted small" style={{ marginBottom: 4 }}>{detailJob.companyName}</div>
+              <div className="bold" style={{ fontSize: 18, marginBottom: 2, paddingRight: 32 }}>{detailJob.title || 'Untitled job'}</div>
+              <div className="muted small" style={{ marginBottom: 4 }}>{detailJob.companyName || ''}</div>
               <div className="muted xs" style={{ marginBottom: 4 }}>
                 {detailJob.location}{detailJob.employmentType ? ` · ${detailJob.employmentType}` : ''}
               </div>
