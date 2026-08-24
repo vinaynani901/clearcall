@@ -27,6 +27,9 @@ const DEFAULT_TAGS = [
   { label: 'Requires Sponsorship', emoji: '📄' },
 ];
 
+// Delivery-specific outcome options for the candidate update route
+const DELIVERY_OUTCOMES = ['Delivered', 'Left at Door', 'Failed No Answer', 'Rescheduled', 'Returned to Depot'];
+
 // Six pre-populated industry tag sets recruiters can load and customise from
 // the Custom Tag Sets settings screen or the new-campaign tag-set picker.
 // These are static/read-only — "loading" one just copies its tags into the
@@ -374,6 +377,35 @@ router.post('/:id/start-delivery-run', authMiddleware, (req, res) => {
   res.json({ success: true, smsSent: sentCount, errors: errors.length > 0 ? errors : undefined });
 });
 
+// POST /api/campaigns/:id/next-delivery/:candidateId — sends a "you are
+// next" SMS to a specific candidate during an active delivery run.
+router.post('/:id/next-delivery/:candidateId', authMiddleware, (req, res) => {
+  const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND employer_user_id = ?').get(req.params.id, req.user.id);
+  if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+  const candidate = db.prepare(`
+    SELECT cc.* FROM campaign_candidates cc
+    JOIN campaign_batches cb ON cb.id = cc.batch_id
+    WHERE cc.id = ? AND cb.campaign_id = ?
+  `).get(req.params.candidateId, campaign.id);
+  if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+
+  const company = campaign.company_id
+    ? db.prepare('SELECT name FROM companies WHERE id = ?').get(campaign.company_id)
+    : null;
+  const companyName = company?.name || 'Your';
+
+  const smsBody = `Hi ${candidate.name.split(' ')[0]}, your ${companyName} driver is now heading to you. You are the next delivery stop. Please be ready to receive your order. Reply DOOR HOME or HOLD to set your delivery preference.`;
+
+  try {
+    const { sendCandidateSms } = require('../services/sms');
+    sendCandidateSms(candidate.phone, smsBody);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(502).json({ error: `Could not send SMS: ${err.message}` });
+  }
+});
+
 // GET /api/campaigns/callbacks/due — every scheduled callback across all of
 // this employer's campaigns, soonest first. Feeds the "Callbacks Due Today"
 // dashboard section.
@@ -419,7 +451,7 @@ router.get('/:id', authMiddleware, (req, res) => {
     };
   });
 
-  res.json({ campaign: { ...campaign, tags: JSON.parse(campaign.tags) }, batches: batchesWithCandidates });
+  res.json({ campaign: { ...campaign, tags: JSON.parse(campaign.tags) }, batches: batchesWithCandidates, deliveryOutcomes: DELIVERY_OUTCOMES });
 });
 
 // PUT /api/campaigns/:id — rename a campaign
@@ -450,10 +482,10 @@ router.delete('/:id', authMiddleware, (req, res) => {
 });
 
 // PUT /api/campaigns/:campaignId/candidates/:candidateId
-// Saves the outcome of a live call — tags, free-text notes, outcome,
+// Saves the outcome of a live call or delivery — tags, free-text notes, outcome,
 // duration, the linked call record, and any scheduled callback — against a
 // campaign candidate. Used by the two-column live call screen's
-// "Save and Next" action.
+// "Save and Next" action. Delivery campaigns get their own outcome options.
 router.put('/:campaignId/candidates/:candidateId', authMiddleware, (req, res) => {
   const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND employer_user_id = ?').get(req.params.campaignId, req.user.id);
   if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
@@ -466,6 +498,12 @@ router.put('/:campaignId/candidates/:candidateId', authMiddleware, (req, res) =>
   if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
 
   const { tags, notes, outcome, callStatus, durationSeconds, callId, callbackAt, name, phone, jobRole } = req.body;
+
+  // Validate delivery outcomes for delivery campaigns
+  const isDeliveryCampaign = campaign.campaign_type === 'delivery' || campaign.campaign_type === 'active_delivery';
+  if (outcome !== undefined && isDeliveryCampaign && !DELIVERY_OUTCOMES.includes(outcome)) {
+    return res.status(400).json({ error: `Invalid outcome for delivery campaign. Allowed: ${DELIVERY_OUTCOMES.join(', ')}` });
+  }
 
   // name/phone/jobRole are corrections the recruiter makes by hand when the
   // uploaded file had bad data in that column (e.g. a LinkedIn URL instead
