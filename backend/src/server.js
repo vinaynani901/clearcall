@@ -31,6 +31,7 @@ const teamRoutes = require('./routes/team');
 const recruiterInviteRoutes = require('./routes/recruiterInvite');
 const pipelineRoutes = require('./routes/pipeline');
 const billingRoutes = require('./routes/billing');
+const paymentRoutes = require('./routes/payments');
 const { startCallbackReminderScheduler } = require('./services/callbackReminders');
 const { startPilotScheduler } = require('./services/pilotScheduler');
 const { startBillingScheduler } = require('./services/billingScheduler');
@@ -104,6 +105,7 @@ app.use('/api/recruiter-invite', recruiterInviteRoutes); // public — no authMi
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/auto-apply', autoApplyRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Serve built frontend in production
 const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
