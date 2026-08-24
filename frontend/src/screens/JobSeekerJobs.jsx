@@ -50,8 +50,9 @@ export default function JobSeekerJobs() {
   const [industry, setIndustry] = useState('');
   const [industries, setIndustries] = useState([]);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [results, setResults] = useState({ clearcallJobs: [], externalJobs: [], externalConfigured: false, externalError: null });
+  const [results, setResults] = useState({ clearcallJobs: [], externalJobs: [], externalConfigured: false, externalError: null, hasMore: false, page: 1 });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [bookmarks, setBookmarks] = useState([]);
   const [applyingId, setApplyingId] = useState(null);
@@ -61,10 +62,25 @@ export default function JobSeekerJobs() {
   const search = () => {
     setLoading(true);
     setError('');
-    api.searchJobs({ q, location, jobType, salaryMin, industry, verifiedOnly: verifiedOnly ? 'true' : undefined })
-      .then(setResults)
+    api.searchJobs({ q, location, jobType, salaryMin, industry, verifiedOnly: verifiedOnly ? 'true' : undefined, page: 1 })
+      .then((d) => setResults({ ...d, page: 1 }))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  const loadMore = () => {
+    setLoadingMore(true);
+    setError('');
+    const nextPage = (results.page || 1) + 1;
+    api.searchJobs({ q, location, jobType, salaryMin, industry, verifiedOnly: verifiedOnly ? 'true' : undefined, page: nextPage })
+      .then((d) => setResults((prev) => ({
+        ...d,
+        clearcallJobs: [...prev.clearcallJobs, ...d.clearcallJobs],
+        externalJobs: [...prev.externalJobs, ...d.externalJobs],
+        page: nextPage,
+      })))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingMore(false));
   };
 
   useEffect(() => { search(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -237,6 +253,24 @@ export default function JobSeekerJobs() {
               </div>
             </div>
           ))}
+          {results.hasMore ? (
+            <div className="center" style={{ marginTop: 16 }}>
+              {loadingMore ? (
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '24px 16px' }}>
+                  <div className="spinner" style={{ width: 24, height: 24, borderWidth: 3 }} />
+                  <div className="muted small">Loading more jobs…</div>
+                </div>
+              ) : (
+                <button className="btn btn-outline" style={{ width: 'auto' }} onClick={loadMore}>
+                  Load More Jobs
+                </button>
+              )}
+            </div>
+          ) : allJobs.length > 0 && !loading && (
+            <div className="center muted xs" style={{ marginTop: 16, padding: 8 }}>
+              No more jobs found.
+            </div>
+          )}
         </div>
       )}
 

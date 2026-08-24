@@ -123,7 +123,7 @@ router.get('/', authMiddleware, async (req, res) => {
   let externalJobs = [];
   let externalError = null;
   if (verifiedOnly !== 'true' && verifiedOnly !== '1') {
-    const result = await adzuna.searchJobs({ what: q, where: location, salaryMin, industry, employmentType: jobType });
+    const result = await adzuna.searchJobs({ what: q, where: location, salaryMin, industry, employmentType: jobType, page: Number(req.query.page) || 1 });
     externalJobs = result.jobs;
     externalError = result.error;
   }
@@ -133,6 +133,8 @@ router.get('/', authMiddleware, async (req, res) => {
     externalJobs,
     externalConfigured: adzuna.isConfigured(),
     externalError,
+    page: Number(req.query.page) || 1,
+    hasMore: externalJobs.length >= 20,
   });
 });
 
