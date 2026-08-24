@@ -44,11 +44,14 @@ export default function UpgradeConfirm() {
     setBusy(true);
     setError('');
     try {
-      await api.selectPlan(planKey);
-      await refresh();
-      setConfirmed(true);
+      const data = await api.createCheckout(planKey, user.id, isJobSeeker ? 'jobseeker' : 'employer');
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned. Please try again.');
+      }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -73,8 +76,7 @@ export default function UpgradeConfirm() {
             </div>
             <div className="bold" style={{ fontSize: 18, marginBottom: 8 }}>You're on the list for {plan.label}</div>
             <p className="muted small" style={{ lineHeight: 1.6, marginBottom: 20 }}>
-              Stripe payment integration is coming soon — we'll notify you the moment payments are ready, and your
-              {' '}{plan.label} plan will activate immediately with no further setup needed on your end.
+              Your plan upgrade has been submitted. Once payment is confirmed you will have access to all {plan.label} features automatically.
             </p>
             <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => navigate(homePath)}>Back to Dashboard</button>
           </div>
@@ -95,12 +97,17 @@ export default function UpgradeConfirm() {
             </div>
 
             <ErrorBanner message={error} />
+
             <button className="btn btn-green" style={{ width: '100%' }} disabled={busy} onClick={proceed}>
-              {busy ? 'Please wait…' : 'Proceed to Payment'}
+              {busy ? (
+                <span className="row" style={{ gap: 8, justifyContent: 'center' }}>
+                  <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                  Processing…
+                </span>
+              ) : (
+                'Proceed to Payment'
+              )}
             </button>
-            <p className="muted xs center" style={{ marginTop: 12 }}>
-              You won't be charged today — payments aren't live yet.
-            </p>
           </div>
         )}
       </div>

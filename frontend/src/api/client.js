@@ -218,6 +218,7 @@ export const api = {
   getJobseekerPricing: () => request('/plans/jobseeker'),
   getMyPlan: () => request('/plans/my'),
   selectPlan: (plan) => request('/plans/select', { method: 'POST', body: { plan } }),
+  createCheckout: (planId, userId, userType) => request('/payments/create-checkout', { method: 'POST', body: { planId, userId, userType } }),
 
   // employer team / member invitations (Part 6/7 — every plan, not just agency recruiters)
   getTeam: () => request('/team'),
