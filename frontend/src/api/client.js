@@ -130,6 +130,7 @@ export const api = {
   sendCandidateSms: (campaignId, candidateId) => request(`/campaigns/${campaignId}/candidates/${candidateId}/sms`, { method: 'POST' }),
   startDeliveryRun: (campaignId) => request(`/campaigns/${campaignId}/start-delivery-run`, { method: 'POST' }),
   nextDeliverySms: (campaignId, candidateId) => request(`/campaigns/${campaignId}/next-delivery/${candidateId}`, { method: 'POST' }),
+  bulkAssign: (assignments) => request('/campaigns/bulk-assign', { method: 'POST', body: { assignments } }),
   getEmployerDashboard: () => request('/dashboard/employer'),
   downloadCampaignResults: (id) => downloadFile(`/campaigns/${id}/results.xlsx`, 'ClearCall Results.xlsx'),
   downloadCampaignCallbacks: (id) => downloadFile(`/campaigns/${id}/callbacks.xlsx`, 'ClearCall Callbacks Due.xlsx'),

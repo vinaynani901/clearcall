@@ -280,6 +280,64 @@ router.post('/', authMiddleware, (req, res) => {
   res.status(201).json({ campaign: { id: campaignId, name: name.trim(), tags: finalTags }, batches: batchSummaries });
 });
 
+// POST /api/campaigns/bulk-assign — assigns multiple campaigns to team
+// members and sends notifications. Accepts array of { campaignId, assignedTo }.
+router.post('/bulk-assign', authMiddleware, (req, res) => {
+  const { assignments } = req.body;
+  if (!Array.isArray(assignments) || assignments.length === 0) {
+    return res.status(400).json({ error: 'An array of assignments is required' });
+  }
+
+  const company = getEmployerCompany(req.user.id);
+  if (!company) return res.status(404).json({ error: 'No company profile found' });
+
+  const results = [];
+  const updateStmt = db.prepare('UPDATE campaigns SET assigned_to = ? WHERE id = ? AND employer_user_id = ?');
+
+  for (const a of assignments) {
+    if (!a.campaignId || !a.assignedTo) {
+      results.push({ campaignId: a.campaignId, success: false, error: 'campaignId and assignedTo are required' });
+      continue;
+    }
+
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ? AND employer_user_id = ?').get(a.campaignId, req.user.id);
+    if (!campaign) {
+      results.push({ campaignId: a.campaignId, success: false, error: 'Campaign not found' });
+      continue;
+    }
+
+    updateStmt.run(a.assignedTo, a.campaignId, req.user.id);
+
+    // Send notification to the assigned team member
+    try {
+      const totalCandidates = db.prepare(`
+        SELECT COUNT(*) as n FROM campaign_candidates cc
+        JOIN campaign_batches cb ON cb.id = cc.batch_id
+        WHERE cb.campaign_id = ?
+      `).get(a.campaignId).n;
+
+      const { newId } = require('../utils/ids');
+      db.prepare(`
+        INSERT INTO notifications (id, user_id, type, title, message, link)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        newId('notif'),
+        a.assignedTo,
+        'campaign_assigned',
+        `New campaign assigned to you — ${campaign.name}`,
+        `New campaign assigned to you — ${campaign.name} with ${totalCandidates} candidates ready to call.`,
+        `/employer/campaigns/${a.campaignId}`
+      );
+    } catch (err) {
+      console.error('[bulk-assign] Notification failed:', err.message);
+    }
+
+    results.push({ campaignId: a.campaignId, success: true });
+  }
+
+  res.json({ success: true, results });
+});
+
 // POST /api/campaigns/sms-reply — Twilio SMS webhook for delivery preference
 // replies. No authMiddleware — Twilio sends the webhook directly.
 router.post('/sms-reply', async (req, res) => {
