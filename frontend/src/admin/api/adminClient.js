@@ -114,6 +114,10 @@ export const adminApi = {
 
   getSystemHealth: () => request('/system-health'),
 
+  // Maintenance mode
+  getMaintenanceStatus: () => request('/maintenance/status'),
+  setMaintenance: (enabled, message, estimatedEndTime) => request('/maintenance/enable', { method: 'POST', body: { enabled, message, estimatedEndTime } }),
+
   getAiAssistantStatus: () => request('/ai-assistant/status'),
   sendAiAssistantMessage: (messages) => request('/ai-assistant/chat', { method: 'POST', body: { messages } }),
 

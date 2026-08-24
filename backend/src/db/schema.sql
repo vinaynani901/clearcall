@@ -204,3 +204,10 @@ CREATE INDEX IF NOT EXISTS idx_campaign_batches_campaign ON campaign_batches(cam
 CREATE INDEX IF NOT EXISTS idx_campaign_batches_call_date ON campaign_batches(call_date);
 CREATE INDEX IF NOT EXISTS idx_campaign_candidates_batch ON campaign_candidates(batch_id);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  id TEXT PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

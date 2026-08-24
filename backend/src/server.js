@@ -53,6 +53,27 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Maintenance mode middleware — checks app_settings before every non-admin
+// API request. GET /api/admin/maintenance/status is exempt so the frontend
+// can detect when maintenance ends.
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/admin/maintenance/status') || req.path === '/health') return next();
+  try {
+    const db = require('./db');
+    const mode = db.prepare("SELECT value FROM app_settings WHERE key = 'maintenance_mode'").get();
+    if (mode?.value === 'true') {
+      const msg = db.prepare("SELECT value FROM app_settings WHERE key = 'maintenance_message'").get();
+      const endTime = db.prepare("SELECT value FROM app_settings WHERE key = 'maintenance_end_time'").get();
+      return res.status(503).json({
+        error: msg?.value || 'The app is currently under maintenance.',
+        maintenanceMode: true,
+        estimatedEndTime: endTime?.value || '',
+      });
+    }
+  } catch (e) { /* table may not exist yet on first boot */ }
+  next();
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'ClearCall API', time: new Date().toISOString() });
 });

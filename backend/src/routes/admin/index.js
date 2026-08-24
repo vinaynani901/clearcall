@@ -70,4 +70,35 @@ router.use('/ai-assistant', require('./aiAssistant'));
 router.use('/plan-control', require('./planControl'));
 router.use('/auto-apply', require('./autoApply'));
 
+// POST /api/admin/maintenance/enable — enable or disable maintenance mode
+router.post('/maintenance/enable', (req, res) => {
+  const { enabled, message, estimatedEndTime } = req.body;
+  const db = require('../../db');
+
+  if (enabled) {
+    db.prepare(`INSERT INTO app_settings (id, key, value) VALUES (?, 'maintenance_mode', 'true')
+      ON CONFLICT(key) DO UPDATE SET value = 'true', updated_at = datetime('now')`).run(require('../../utils/ids').newId('setting'));
+    db.prepare(`INSERT INTO app_settings (id, key, value) VALUES (?, 'maintenance_message', ?)
+      ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')`).run(require('../../utils/ids').newId('setting'), message || '', message || '');
+    db.prepare(`INSERT INTO app_settings (id, key, value) VALUES (?, 'maintenance_end_time', ?)
+      ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')`).run(require('../../utils/ids').newId('setting'), estimatedEndTime || '', estimatedEndTime || '');
+  } else {
+    db.prepare("DELETE FROM app_settings WHERE key IN ('maintenance_mode', 'maintenance_message', 'maintenance_end_time')").run();
+  }
+  res.json({ success: true, enabled: !!enabled });
+});
+
+// GET /api/admin/maintenance/status — public endpoint, no auth needed
+router.get('/maintenance/status', (req, res) => {
+  const db = require('../../db');
+  const mode = db.prepare("SELECT value FROM app_settings WHERE key = 'maintenance_mode'").get();
+  const message = db.prepare("SELECT value FROM app_settings WHERE key = 'maintenance_message'").get();
+  const endTime = db.prepare("SELECT value FROM app_settings WHERE key = 'maintenance_end_time'").get();
+  res.json({
+    maintenanceMode: mode?.value === 'true',
+    message: message?.value || '',
+    estimatedEndTime: endTime?.value || '',
+  });
+});
+
 module.exports = router;
